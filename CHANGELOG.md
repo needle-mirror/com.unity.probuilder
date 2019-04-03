@@ -1,3 +1,40 @@
+# ProBuilder 3.0.2
+
+## Features
+
+- API Examples are now published on [Github](https://github.com/Unity-Technologies/ProBuilder-API-Examples).
+- Expose poly shape creation methods. Add API example.
+- Support drag and drop materials to ProBuilder meshes.
+- Mesh handles now use Unity gizmo colors by default.
+- New options to set unselected and selected edge colors.
+- New option to set edge and wireframe line width (not available on Metal).
+
+## Bug Fixes
+
+- Fix scene info not updating with selection changes.
+- Fix `Apply Material` only applying to parent gameobjects if children are also selected.
+- Fix `pb_Object.SetSelectedFaces` setting duplicate vertex indices.
+- Fix `Alt+Num` material shortcut throwing null if Material Editor has not been opened and no default palette is found.
+- Fix bug where `Undo` on a Poly Shape would reset any mesh edits.
+- Fix preferences interface not updating after resetting all preferences.
+- Fix bug where the edge picker would prefer vertical lines over horizontal.
+- Fix wireframe rendering with unselected edge color in certain cases.
+- Fix edge selection preferring vertical edges.
+- Expand preferences window contents to match size.
+- Don't show "shortcuts were cleared" warning if no prior version is detected.
+- Fix overexposed imgui controls in scene view with scene lighting disabled.
+- Fix certain actions switching the current scene focus.
+- Fix Create Material Palette failing to create asset.
+- Export model files with culture invariant settings.
+- Fix scene info display overlapping ProGrids toolbar in some cases.
+- Fix local preferences not loading until restarting the ProBuilder editor.
+- Fix Boolean Editor rendering a white texture filling the entire screen.
+
+## Changes
+
+- Remove update checking.
+- Expose `pb_MeshImporter` class, making "ProBuilderize" action available at runtime.
+
 # ProBuilder 3.0.1-f.0
 
 ## Features
