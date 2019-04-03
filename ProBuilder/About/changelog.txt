@@ -1,3 +1,21 @@
+# ProBuilder 3.0.6
+
+## Bug Fixes
+
+- Fix upgrade prompt failing to show on version changes.
+
+# ProBuilder 3.0.5
+
+## Bug Fixes
+
+- Fix About Window opening on every script reload event.
+
+# ProBuilder 3.0.4
+
+## Bug Fixes
+
+- Use the default material preference for shapes created through the Boolean Editor.
+
 # ProBuilder 3.0.3
 
 ## Features
