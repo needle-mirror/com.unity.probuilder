@@ -1,8 +1,6 @@
 using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine.ProBuilder;
 using System;
 
 namespace UnityEngine.ProBuilder.MeshOperations
@@ -20,7 +18,7 @@ namespace UnityEngine.ProBuilder.MeshOperations
             this.faceRebuildData = faceRebuildData;
             this.newVertexIndexes = newVertexIndexes;
         }
-    };
+    }
 
     /// <summary>
     /// Utility class for connecting edges, faces, and vertices.
@@ -35,8 +33,14 @@ namespace UnityEngine.ProBuilder.MeshOperations
         /// <returns>The faces created as a result of inserting new edges.</returns>
         public static Face[] Connect(this ProBuilderMesh mesh, IEnumerable<Face> faces)
         {
-            IEnumerable<Edge> edges = faces.SelectMany(x => x.edgesInternal);
+            var split = MeshValidation.EnsureFacesAreComposedOfContiguousTriangles(mesh, faces);
             HashSet<Face> mask = new HashSet<Face>(faces);
+            if (split.Count > 0)
+            {
+                foreach (var face in split)
+                    mask.Add(face);
+            }
+            IEnumerable<Edge> edges = mask.SelectMany(x => x.edgesInternal);
             Edge[] empty;
             Face[] res;
             Connect(mesh, edges, out res, out empty, true, false, mask);
@@ -228,14 +232,17 @@ namespace UnityEngine.ProBuilder.MeshOperations
 
                 if (inserts == 1 || (faceMask != null && !faceMask.Contains(face)))
                 {
-                    ConnectFaceRebuildData c = InsertVertices(face, targetEdges, vertices);
+                    ConnectFaceRebuildData c;
 
-                    Vector3 fn = Math.Normal(c.faceRebuildData.vertices, c.faceRebuildData.face.indexesInternal);
+                    if (InsertVertices(face, targetEdges, vertices, out c))
+                    {
+                        Vector3 fn = Math.Normal(c.faceRebuildData.vertices, c.faceRebuildData.face.indexesInternal);
 
-                    if (Vector3.Dot(nrm, fn) < 0)
-                        c.faceRebuildData.face.Reverse();
+                        if (Vector3.Dot(nrm, fn) < 0)
+                            c.faceRebuildData.face.Reverse();
 
-                    results.Add(c);
+                        results.Add(c);
+                    }
                 }
                 else if (inserts > 1)
                 {
@@ -425,7 +432,7 @@ namespace UnityEngine.ProBuilder.MeshOperations
             return faces;
         }
 
-        static ConnectFaceRebuildData InsertVertices(Face face, List<WingedEdge> edges, List<Vertex> vertices)
+        static bool InsertVertices(Face face, List<WingedEdge> edges, List<Vertex> vertices, out ConnectFaceRebuildData data)
         {
             List<Edge> perimeter = WingedEdge.SortEdgesByAdjacency(face);
             List<Vertex> n_vertices = new List<Vertex>();
@@ -445,13 +452,21 @@ namespace UnityEngine.ProBuilder.MeshOperations
 
             FaceRebuildData res = AppendElements.FaceWithVertices(n_vertices, false);
 
-            res.face.textureGroup = face.textureGroup;
-            res.face.uv = new AutoUnwrapSettings(face.uv);
-            res.face.smoothingGroup = face.smoothingGroup;
-            res.face.manualUV = face.manualUV;
-            res.face.submeshIndex = face.submeshIndex;
+            if (res != null)
+            {
+                res.face.textureGroup = face.textureGroup;
+                res.face.uv = new AutoUnwrapSettings(face.uv);
+                res.face.smoothingGroup = face.smoothingGroup;
+                res.face.manualUV = face.manualUV;
+                res.face.submeshIndex = face.submeshIndex;
 
-            return new ConnectFaceRebuildData(res, newVertexIndexes);
+                data = new ConnectFaceRebuildData(res, newVertexIndexes);
+                return true;
+            }
+
+            data = null;
+
+            return false;
         }
 
         static List<ConnectFaceRebuildData> ConnectIndexesPerFace(

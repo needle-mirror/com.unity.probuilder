@@ -19,14 +19,23 @@ namespace UnityEditor.ProBuilder
 
         static bool s_TotalElementCountCacheIsDirty = true;
         static bool s_SelectedElementGroupsDirty = true;
+        static bool s_SelectedFacesInEditAreaDirty = true;
+        static bool s_SelectionBoundsDirty = true;
+
         static Bounds s_SelectionBounds = new Bounds();
+        static Dictionary<ProBuilderMesh, List<Face>> s_SelectedFacesInEditArea = new Dictionary<ProBuilderMesh, List<Face>>();
 
         /// <value>
         /// An axis-aligned bounding box encompassing the selected elements.
         /// </value>
         public static Bounds bounds
         {
-            get { return s_SelectionBounds; }
+            get
+            {
+                if(s_SelectionBoundsDirty)
+                    RecalculateSelectionBounds();
+                return s_SelectionBounds;
+            }
         }
 
         static int s_TotalVertexCount;
@@ -68,9 +77,18 @@ namespace UnityEditor.ProBuilder
         internal static int selectedEdgeCountObjectMax { get; private set; }
         internal static int selectedVertexCountObjectMax { get; private set; }
         internal static int selectedSharedVertexCountObjectMax { get; private set; }
+        internal static int selectedCoincidentVertexCountMax { get; private set; }
 
         // Faces that need to be refreshed when moving or modifying the actual selection
-        internal static Dictionary<ProBuilderMesh, List<Face>> selectedFacesInEditZone { get; private set; }
+        internal static Dictionary<ProBuilderMesh, List<Face>> selectedFacesInEditZone
+        {
+            get
+            {
+                if(s_SelectedFacesInEditAreaDirty)
+                    RecalculateFacesInEditableArea();
+                return s_SelectedFacesInEditArea;
+            }
+        }
 
         internal static void InvalidateElementSelection()
         {
@@ -91,6 +109,7 @@ namespace UnityEditor.ProBuilder
             Selection.selectionChanged += OnObjectSelectionChanged;
             ProBuilderMesh.elementSelectionChanged += ElementSelectionChanged;
             EditorMeshUtility.meshOptimized += (x, y) => { s_TotalElementCountCacheIsDirty = true; };
+            ProBuilderMesh.componentWillBeDestroyed += RemoveMeshFromSelectionInternal;
             OnObjectSelectionChanged();
         }
 
@@ -145,7 +164,9 @@ namespace UnityEditor.ProBuilder
         internal static void OnComponentSelectionChanged()
         {
             s_TotalElementCountCacheIsDirty = true;
+            s_SelectedFacesInEditAreaDirty = true;
             s_SelectedElementGroupsDirty = true;
+            s_SelectionBoundsDirty = true;
 
             selectedVertexCount = 0;
             selectedFaceCount = 0;
@@ -155,11 +176,10 @@ namespace UnityEditor.ProBuilder
             selectedFaceCountObjectMax = 0;
             selectedVertexCountObjectMax = 0;
             selectedSharedVertexCountObjectMax = 0;
+            selectedCoincidentVertexCountMax = 0;
             selectedEdgeCountObjectMax = 0;
 
             RecalculateSelectedComponentCounts();
-            RecalculateFacesInEditableArea();
-            RecalculateSelectionBounds();
         }
 
         static void ElementSelectionChanged(ProBuilderMesh mesh)
@@ -200,6 +220,7 @@ namespace UnityEditor.ProBuilder
 
                 selectedVertexCountObjectMax = System.Math.Max(selectedVertexCountObjectMax, mesh.selectedIndexesInternal.Length);
                 selectedSharedVertexCountObjectMax = System.Math.Max(selectedSharedVertexCountObjectMax, mesh.selectedSharedVerticesCount);
+                selectedCoincidentVertexCountMax = System.Math.Max(selectedCoincidentVertexCountMax, mesh.selectedCoincidentVertexCount);
                 selectedFaceCountObjectMax = System.Math.Max(selectedFaceCountObjectMax, mesh.selectedFaceCount);
                 selectedEdgeCountObjectMax = System.Math.Max(selectedEdgeCountObjectMax, mesh.selectedEdgeCount);
             }
@@ -207,6 +228,7 @@ namespace UnityEditor.ProBuilder
 
         internal static void RecalculateSelectionBounds()
         {
+            s_SelectionBoundsDirty = false;
             s_SelectionBounds = new Bounds();
             var boundsInitialized = false;
 
@@ -234,16 +256,14 @@ namespace UnityEditor.ProBuilder
             }
         }
 
-        internal static void RecalculateFacesInEditableArea()
+        static void RecalculateFacesInEditableArea()
         {
-            if (selectedFacesInEditZone != null)
-                selectedFacesInEditZone.Clear();
-            else
-                selectedFacesInEditZone = new Dictionary<ProBuilderMesh, List<Face>>();
+            s_SelectedFacesInEditAreaDirty = false;
+            s_SelectedFacesInEditArea.Clear();
 
             foreach (var mesh in topInternal)
             {
-                selectedFacesInEditZone.Add(mesh, ElementSelection.GetNeighborFaces(mesh, mesh.selectedIndexesInternal));
+                s_SelectedFacesInEditArea.Add(mesh, ElementSelection.GetNeighborFaces(mesh, mesh.selectedIndexesInternal));
             }
         }
 
@@ -353,7 +373,7 @@ namespace UnityEditor.ProBuilder
 
             Object[] temp = new Object[Selection.objects.Length - 1];
 
-            for (int i = 1; i < temp.Length; i++)
+            for (int i = 0; i < temp.Length; i++)
             {
                 if (i != ind)
                     temp[i] = Selection.objects[i];
@@ -363,6 +383,40 @@ namespace UnityEditor.ProBuilder
 
             if (Selection.activeGameObject == t)
                 Selection.activeObject = temp.FirstOrDefault();
+        }
+
+        internal static void MakeActiveObject(GameObject t)
+        {
+            if (t == null || !Selection.objects.Contains(t))
+                return;
+
+            int ind = System.Array.IndexOf(Selection.objects, t);
+            int len = Selection.objects.Length;
+
+            Object[] temp = new Object[len];
+
+            for (int i = 0; i < len - 1 ; i++)
+            {
+                if(i == ind)
+                {
+                    temp[i] = Selection.objects[len - 1];
+                }
+                else
+                {
+                    temp[i] = Selection.objects[i];
+                }
+            }
+
+            temp[len - 1] = t;
+
+            Selection.activeObject = t;
+            Selection.objects = temp;
+        }
+
+        internal static void RemoveMeshFromSelectionInternal(ProBuilderMesh mesh)
+        {
+            if (s_TopSelection.Contains(mesh))
+                s_TopSelection.Remove(mesh);
         }
 
         internal static void SetSelection(IList<GameObject> newSelection)

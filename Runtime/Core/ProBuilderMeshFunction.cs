@@ -53,6 +53,9 @@ namespace UnityEngine.ProBuilder
 
         void OnDestroy()
         {
+            if (componentWillBeDestroyed != null)
+                componentWillBeDestroyed(this);
+
             // Time.frameCount is zero when loading scenes in the Editor. It's the only way I could figure to
             // differentiate between OnDestroy invoked from user delete & editor scene loading.
             if (!preserveMeshAssetOnDestroy &&
@@ -194,6 +197,9 @@ namespace UnityEngine.ProBuilder
             Refresh();
         }
 
+        /// <summary>
+        /// Wraps <see cref="ToMesh"/> and <see cref="Refresh"/>.
+        /// </summary>
         internal void Rebuild()
         {
             ToMesh();
@@ -407,7 +413,7 @@ namespace UnityEngine.ProBuilder
         {
             if (!IsValidTextureGroup(group))
                 return;
-            
+
             foreach (var face in facesInternal)
             {
                 if (face.textureGroup != group)

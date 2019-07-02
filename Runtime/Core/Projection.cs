@@ -123,7 +123,7 @@ namespace UnityEngine.ProBuilder
             }
         }
 
-        internal static void PlanarProject(ProBuilderMesh mesh, Face face)
+        internal static void PlanarProject(ProBuilderMesh mesh, Face face, Vector3 projection = default)
         {
             var nrm = Math.Normal(mesh, face);
             var trs = (Transform)null;
@@ -135,8 +135,12 @@ namespace UnityEngine.ProBuilder
                 nrm = trs.TransformDirection(nrm);
             }
 
-            var axis = VectorToProjectionAxis(nrm);
-            var prj = GetTangentToAxis(axis);
+            Vector3 prj = projection;
+            if (prj == Vector3.zero)
+            {
+                var axis = VectorToProjectionAxis(nrm);
+                prj = GetTangentToAxis(axis);
+            }
 
             var uAxis = Vector3.Cross(nrm, prj);
             var vAxis = Vector3.Cross(uAxis, nrm);
@@ -269,10 +273,16 @@ namespace UnityEngine.ProBuilder
             float y = System.Math.Abs(direction.y);
             float z = System.Math.Abs(direction.z);
 
-            if (x > y && x > z)
+            // Prior to 2019.1 Vector3.Normalize did not use System.Math for Magnitude calculations. There is a slight
+            // difference between 2018.3 and 2019.1 in accuracy, with 2019.1 being more correct. This inaccuracy results
+            // in float comparison problems (ex, .00700000001 > .007). To account for that we add an additional equality
+            // check here.
+            // In most other cases this doesn't matter, but since we need this function to be deterministic regardless
+            // of floating point inaccuracy it is necessary here.
+            if (!Math.Approx(x, y) && x > y && !Math.Approx(x, z) && x > z)
                 return direction.x > 0 ? ProjectionAxis.X : ProjectionAxis.XNegative;
 
-            if (y > z)
+            if (!Math.Approx(y, z) && y > z)
                 return direction.y > 0 ? ProjectionAxis.Y : ProjectionAxis.YNegative;
 
             return direction.z > 0 ? ProjectionAxis.Z : ProjectionAxis.ZNegative;

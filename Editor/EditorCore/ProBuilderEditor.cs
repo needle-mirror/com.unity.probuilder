@@ -6,8 +6,8 @@ using System;
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using UnityEngine.ProBuilder;
 using UnityEditor.ProBuilder.Actions;
+using UnityEngine.ProBuilder;
 using PMesh = UnityEngine.ProBuilder.ProBuilderMesh;
 using UObject = UnityEngine.Object;
 using UnityEditor.SettingsManagement;
@@ -46,7 +46,7 @@ namespace UnityEditor.ProBuilder
         /// </value>
         public static event Action<IEnumerable<ProBuilderMesh>> beforeMeshModification;
 
-        static EditorToolbar s_EditorToolbar;
+        internal static EditorToolbar s_EditorToolbar;
         static ProBuilderEditor s_Instance;
 
         GUIContent[] m_EditModeIcons;
@@ -73,38 +73,44 @@ namespace UnityEditor.ProBuilder
         static Pref<float> s_PickingDistance = new Pref<float>("picking.pickingDistance", 128f, SettingsScope.User);
 
         static Pref<bool> s_WindowIsFloating = new Pref<bool>("UnityEngine.ProBuilder.ProBuilderEditor-isUtilityWindow", false, SettingsScope.Project);
+        static Pref<bool> m_BackfaceSelectEnabled = new Pref<bool>("editor.backFaceSelectEnabled", false);
+        static Pref<RectSelectMode> m_DragSelectRectMode = new Pref<RectSelectMode>("editor.dragSelectRectMode", RectSelectMode.Partial);
+        static Pref<SelectionModifierBehavior> m_SelectModifierBehavior = new Pref<SelectionModifierBehavior>("editor.rectSelectModifier", SelectionModifierBehavior.Difference);
+        static Pref<SelectMode> s_SelectMode = new Pref<SelectMode>("editor.selectMode", SelectMode.Object);
 
-        internal Pref<bool> m_BackfaceSelectEnabled = new Pref<bool>("editor.backFaceSelectEnabled", false);
-        internal Pref<RectSelectMode> m_DragSelectRectMode = new Pref<RectSelectMode>("editor.dragSelectRectMode", RectSelectMode.Partial);
-        internal Pref<SelectionModifierBehavior> m_SelectModifierBehavior = new Pref<SelectionModifierBehavior>("editor.rectSelectModifier", SelectionModifierBehavior.Difference);
-        Pref<SelectMode> m_SelectMode = new Pref<SelectMode>("editor.selectMode", SelectMode.Object);
-
-        internal RectSelectMode rectSelectMode
+        internal static RectSelectMode rectSelectMode
         {
             get { return m_DragSelectRectMode.value; }
+
             set
             {
                 if (m_DragSelectRectMode.value == value)
                     return;
+
                 m_DragSelectRectMode.SetValue(value, true);
-                m_ScenePickerPreferences.rectSelectMode = value;
+
+                if (s_Instance != null)
+                    s_Instance.m_ScenePickerPreferences.rectSelectMode = value;
             }
         }
 
-        internal SelectionModifierBehavior selectionModifierBehavior
+        internal static SelectionModifierBehavior selectionModifierBehavior
         {
             get { return m_SelectModifierBehavior.value; }
 
             set
             {
-                if (m_SelectModifierBehavior.value == value)
+                if (s_Instance == null || m_SelectModifierBehavior.value == value)
                     return;
+
                 m_SelectModifierBehavior.SetValue(value, true);
-                m_ScenePickerPreferences.selectionModifierBehavior = value;
+
+                if (s_Instance != null)
+                    s_Instance.m_ScenePickerPreferences.selectionModifierBehavior = value;
             }
         }
 
-        internal bool backfaceSelectionEnabled
+        internal static bool backfaceSelectionEnabled
         {
             get { return m_BackfaceSelectEnabled.value; }
 
@@ -114,7 +120,9 @@ namespace UnityEditor.ProBuilder
                     return;
 
                 m_BackfaceSelectEnabled.SetValue(value, true);
-                m_ScenePickerPreferences.cullMode = value ? CullingMode.None : CullingMode.Back;
+
+                if(s_Instance != null)
+                    s_Instance.m_ScenePickerPreferences.cullMode = value ? CullingMode.None : CullingMode.Back;
             }
         }
 
@@ -176,7 +184,7 @@ namespace UnityEditor.ProBuilder
         [Obsolete]
         internal static EditLevel editLevel
         {
-            get { return s_Instance != null ? EditorUtility.GetEditLevel(instance.m_SelectMode) : EditLevel.Top; }
+            get { return s_Instance != null ? EditorUtility.GetEditLevel(s_SelectMode) : EditLevel.Top; }
         }
 
         /// <summary>
@@ -186,7 +194,7 @@ namespace UnityEditor.ProBuilder
         [Obsolete]
         internal static ComponentMode componentMode
         {
-            get { return s_Instance != null ? EditorUtility.GetComponentMode(instance.m_SelectMode) : ComponentMode.Face; }
+            get { return s_Instance != null ? EditorUtility.GetComponentMode(s_SelectMode) : ComponentMode.Face; }
         }
 
         /// <value>
@@ -197,7 +205,7 @@ namespace UnityEditor.ProBuilder
             get
             {
                 if (s_Instance != null)
-                    return s_Instance.m_SelectMode;
+                    return s_SelectMode;
 
                 // for backwards compatibility reasons `Object` is returned when editor is closed
                 return SelectMode.Object;
@@ -208,12 +216,12 @@ namespace UnityEditor.ProBuilder
                 if (s_Instance == null)
                     return;
 
-                var previous = s_Instance.m_SelectMode.value;
+                var previous = s_SelectMode.value;
 
                 if (previous == value)
                     return;
 
-                s_Instance.m_SelectMode.SetValue(value, true);
+                s_SelectMode.SetValue(value, true);
 
                 if (previous == SelectMode.Edge || previous == SelectMode.Vertex || previous == SelectMode.Face)
                     s_Instance.m_LastComponentMode = previous;
@@ -414,13 +422,7 @@ namespace UnityEditor.ProBuilder
 
         void InitGUI()
         {
-            if (s_EditorToolbar != null)
-                UObject.DestroyImmediate(s_EditorToolbar);
-
-            s_EditorToolbar = ScriptableObject.CreateInstance<EditorToolbar>();
-            s_EditorToolbar.hideFlags = HideFlags.HideAndDontSave;
-            s_EditorToolbar.InitWindowProperties(this);
-
+            OpenEditorToolbar();
             VertexTranslationInfoStyle = new GUIStyle();
             VertexTranslationInfoStyle.normal.background = EditorGUIUtility.whiteTexture;
             VertexTranslationInfoStyle.normal.textColor = new Color(1f, 1f, 1f, .6f);
@@ -441,6 +443,9 @@ namespace UnityEditor.ProBuilder
 
         void OnGUI()
         {
+            if (s_EditorToolbar != null && s_EditorToolbar.isIconMode != s_IsIconGui.value)
+                IconModeChanged();
+
             if (m_CommandStyle == null)
                 m_CommandStyle = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle("Command");
 
@@ -491,14 +496,25 @@ namespace UnityEditor.ProBuilder
             }
         }
 
-        void Menu_ToggleIconMode()
+        void OpenEditorToolbar()
         {
-            s_IsIconGui.value = !s_IsIconGui.value;
             if (s_EditorToolbar != null)
                 DestroyImmediate(s_EditorToolbar);
+
             s_EditorToolbar = ScriptableObject.CreateInstance<EditorToolbar>();
             s_EditorToolbar.hideFlags = HideFlags.HideAndDontSave;
             s_EditorToolbar.InitWindowProperties(this);
+        }
+
+        void IconModeChanged()
+        {
+            OpenEditorToolbar();
+        }
+
+        void Menu_ToggleIconMode()
+        {
+            s_IsIconGui.value = !s_IsIconGui.value;
+            IconModeChanged();
         }
 
         public void AddItemsToMenu(GenericMenu menu)
@@ -530,7 +546,7 @@ namespace UnityEditor.ProBuilder
             {
                 return s_Instance == null
                     ? null
-                    : s_Instance.GetToolForSelectMode(s_Instance.m_CurrentTool, s_Instance.m_SelectMode);
+                    : s_Instance.GetToolForSelectMode(s_Instance.m_CurrentTool, s_SelectMode);
             }
         }
 
@@ -644,7 +660,7 @@ namespace UnityEditor.ProBuilder
 
             if (selectMode.IsMeshElementMode() && MeshSelection.selectedVertexCount > 0)
             {
-                var tool = GetToolForSelectMode(m_CurrentTool, m_SelectMode);
+                var tool = GetToolForSelectMode(m_CurrentTool, s_SelectMode);
 
                 if (tool != null)
                     tool.OnSceneGUI(m_CurrentEvent);
@@ -1018,11 +1034,11 @@ namespace UnityEditor.ProBuilder
         /// </summary>
         internal void ToggleSelectionMode()
         {
-            if (m_SelectMode == SelectMode.Vertex)
+            if (s_SelectMode == SelectMode.Vertex)
                 selectMode = SelectMode.Edge;
-            else if (m_SelectMode == SelectMode.Edge)
+            else if (s_SelectMode == SelectMode.Edge)
                 selectMode = SelectMode.Face;
-            else if (m_SelectMode == SelectMode.Face)
+            else if (s_SelectMode == SelectMode.Face)
                 selectMode = SelectMode.Vertex;
         }
 
@@ -1032,8 +1048,8 @@ namespace UnityEditor.ProBuilder
 
             if (selectionChanged)
             {
-                UpdateSceneInfo();
                 MeshSelection.OnComponentSelectionChanged();
+                UpdateSceneInfo();
             }
 
             if (selectionUpdated != null)
@@ -1165,7 +1181,7 @@ namespace UnityEditor.ProBuilder
                     continue;
 
                 var indexes = mesh.GetCoincidentVertices(mesh.selectedIndexesInternal);
-                Snapping.SnapVertices(mesh, indexes, Vector3.one * snapVal);
+                ProGridsSnapping.SnapVertices(mesh, indexes, Vector3.one * snapVal);
 
                 mesh.ToMesh();
                 mesh.Refresh();

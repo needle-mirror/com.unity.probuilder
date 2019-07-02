@@ -3,11 +3,15 @@
 using UnityEngine;
 using System.Linq;
 using System;
-using System.Reflection;
+using UnityEditor.Experimental.SceneManagement;
 using UnityEngine.ProBuilder;
 using UnityEngine.Rendering;
 using UObject = UnityEngine.Object;
 using UnityEditor.SettingsManagement;
+using UnityEngine.SceneManagement;
+#if !UNITY_2019_1_OR_NEWER
+using System.Reflection;
+#endif
 
 namespace UnityEditor.ProBuilder
 {
@@ -17,18 +21,15 @@ namespace UnityEditor.ProBuilder
     public static class EditorUtility
     {
         const float k_DefaultNotificationDuration = 1f;
-        static float s_NotificationTimer = 0f;
+        static float s_NotificationTimer;
         static EditorWindow s_NotificationWindow;
-        static bool s_IsNotificationDisplayed = false;
+        static bool s_IsNotificationDisplayed;
 
         [UserSetting("General", "Show Action Notifications", "Enable or disable notification popups when performing actions.")]
         static Pref<bool> s_ShowNotifications = new Pref<bool>("editor.showEditorNotifications", false);
 
         [UserSetting("Mesh Settings", "Static Editor Flags", "Default static flags to apply to new shapes.")]
         static Pref<StaticEditorFlags> s_StaticEditorFlags = new Pref<StaticEditorFlags>("mesh.defaultStaticEditorFlags", 0);
-
-        [UserSetting("Mesh Settings", "Material", "The default material to be applied to newly created shapes.")]
-        static Pref<Material> s_DefaultMaterial = new Pref<Material>("mesh.userMaterial", null);
 
         [UserSetting("Mesh Settings", "Mesh Collider is Convex", "If a MeshCollider is set as the default collider component, this sets the convex setting.")]
         static Pref<bool> s_MeshColliderIsConvex = new Pref<bool>("mesh.meshColliderIsConvex", false);
@@ -263,17 +264,45 @@ namespace UnityEditor.ProBuilder
         }
 
         /// <summary>
+        /// Move a GameObject to the active scene, where active scene may be a prefab stage.
+        /// </summary>
+        /// <param name="gameObject"></param>
+        internal static void MoveToActiveScene(GameObject gameObject)
+        {
+            var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            var activeScene = SceneManager.GetActiveScene();
+
+            if (prefabStage != null)
+            {
+                if (gameObject.scene != prefabStage.scene)
+                {
+                    SceneManager.MoveGameObjectToScene(gameObject, prefabStage.scene);
+
+                    // Prefabs cannot have multiple roots
+                    gameObject.transform.SetParent(prefabStage.prefabContentsRoot.transform, true);
+                }
+            }
+            else if(gameObject.scene != activeScene)
+            {
+                gameObject.transform.SetParent(null);
+                SceneManager.MoveGameObjectToScene(gameObject, activeScene);
+            }
+        }
+
+        /// <summary>
         /// Initialize this object with the various editor-only parameters, and invoke the object creation callback.
         /// </summary>
         /// <param name="pb"></param>
         internal static void InitObject(ProBuilderMesh pb)
         {
+            MoveToActiveScene(pb.gameObject);
+
             ScreenCenter(pb.gameObject);
 
             SetPivotLocationAndSnap(pb);
 
             pb.renderer.shadowCastingMode = s_ShadowCastingMode;
-            pb.renderer.sharedMaterial = GetUserMaterial();
+            pb.renderer.sharedMaterial = EditorMaterialUtility.GetUserMaterial();
 
             GameObjectUtility.SetStaticEditorFlags(pb.gameObject, s_StaticEditorFlags);
 
@@ -299,9 +328,9 @@ namespace UnityEditor.ProBuilder
         internal static void SetPivotLocationAndSnap(ProBuilderMesh mesh)
         {
             if (ProGridsInterface.SnapEnabled())
-                mesh.transform.position = Snapping.SnapValue(mesh.transform.position, ProGridsInterface.SnapValue());
+                mesh.transform.position = ProGridsSnapping.SnapValue(mesh.transform.position, ProGridsInterface.SnapValue());
             else if (s_SnapNewShapesToGrid)
-                mesh.transform.position = Snapping.SnapValue(mesh.transform.position, new Vector3(
+                mesh.transform.position = ProGridsSnapping.SnapValue(mesh.transform.position, new Vector3(
                             EditorPrefs.GetFloat("MoveSnapX"),
                             EditorPrefs.GetFloat("MoveSnapY"),
                             EditorPrefs.GetFloat("MoveSnapZ")));
@@ -538,16 +567,6 @@ namespace UnityEditor.ProBuilder
                 default:
                     return ComponentMode.Face;
             }
-        }
-
-        internal static Material GetUserMaterial()
-        {
-            var mat = (Material)s_DefaultMaterial;
-
-            if (mat != null)
-                return mat;
-
-            return BuiltinMaterials.defaultMaterial;
         }
 
         internal static bool IsDeveloperMode()
