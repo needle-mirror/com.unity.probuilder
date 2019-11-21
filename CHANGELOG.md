@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2019-11-22
+
+## Features
+
+- Added the `Offset Elements` action to quickly move selected mesh elements in world, local, or element space.
+- Added the ability to set a custom range in the `Subdivide Edges` options window.
+- Added the ability to set wireframe and edge line width on macOS when using Metal as the graphics backend.
+
+## Bug Fixes
+
+- Fixed `Boolean Editor` menu item not respecting the Experimental Features Enabled preference.
+- Fixed `Boolean Editor` preview images not updating with selection changes.
+- Fixed potential error when pressing the `Object Mode` shortcut without a `ProBuilder Editor` instance available.
+- Fixed an issue where a currently editing text field would lose focus when a ProBuilder tooltip was shown.
+- Fixed a case where `Weld Vertices` could leave the mesh selection in an invalid state.
+- Fixed an issue where a ProBuilder tooltip could appear when hovering on a window on top of the toolbar.
+- Fixed the ProBuilder toolbar background color applying to entire button (Unity 2019.3 only).
+- Fixed `Select by Material` sometimes returning incorrect results.
+- Fixed `Merge Objects` not retaining active `GameObject` components and properties.
+- Added a dialog when `New Poly Shape` fails to find an unlocked `Inspector` window.
+- Fixed case where `New Poly Shape` could create a mis-aligned object when used with ProGrids.
+- Fixed edge case where the ProBuilder selection could become desynchronized with the Unity selection.
+- Fixed `UV Editor` window minimum width not being sufficient to accommodate the toolbar.
+- Fixed a case where duplicate `ProBuilderMesh` components could share a reference to the same `Mesh`.
+- Fixed an issue that caused mesh element picking to stop working for some users.
+- Fixed the `Smooth Group` window toolbar buttons not showing active state correctly.
+- Fixed a case where selecting a previously edited `ProBuilderMesh` could append to the prior selection instead of replacing it.
+- Fixed some cases where `ProBuilderMesh` would incorrectly enforce a max vertex count.
+- Fixed an issue that caused errors to thrown when entering play mode with the `Shape Tool` window open.
+- Fixed the `Shape Tool` destroying and recreating the preview `GameObject` when adjusting settings.
+- Fixed an issue where the `Poly Shape` editor would destroy the `GameObject` if initialized with an invalid path.
+- Fixed a potential error when undoing a `ProBuilderize` action.
+- Fixed a warning when importing ProBuilder to macOS projects using Metal as the rendering backend.
+
+## Changes
+
+- [Samples] Rename LWRP to Universal Render Pipeline.
+- Added support for holes when creating shapes from a polygon (API only).
+- [Samples] Remove obsolete references from `EventSystem` GameObject.
+- [Samples] Remove `GUILayer` components from `Camera`.
+- `Shape Tool` settings are now persistent as user settings.
+
 ## [4.1.0] - 2019-07-03
 
 ### Features
