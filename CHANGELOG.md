@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.2.2-preview.1] - 2020-01-15
+
+## Bug Fixes
+
+- [case: 1204742] Fixed the `Custom Shape` field in the `Shape Editor` throwing errors on invalid input.
+- [case: 1173650] Fixed an issue that resulted in vertices and edges becoming unselectable on macOS in some cases.
+- Fixed Edge pre-selection highlight not rendering on macOS when using Metal as a graphics backend.
+
 ## [4.2.1] - 2019-11-22
 
 ## Features
