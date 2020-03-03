@@ -25,6 +25,7 @@ namespace UnityEditor.ProBuilder
 
         Plane m_Plane = new Plane(Vector3.up, Vector3.zero);
 
+        int m_ControlId;
         bool m_PlacingPoint = false;
         int m_SelectedIndex = -2;
         float m_DistanceFromHeightHandle;
@@ -60,6 +61,11 @@ namespace UnityEditor.ProBuilder
             m_LineMesh = new Mesh();
             m_LineMaterial = CreateHighlightLineMaterial();
             Undo.undoRedoPerformed += UndoRedoPerformed;
+#if UNITY_2019_1_OR_NEWER
+            SceneView.duringSceneGui += DuringSceneGUI;
+#else
+            SceneView.onSceneGUIDelegate += DuringSceneGUI;
+#endif
             DrawPolyLine(polygon.m_Points);
             EditorApplication.update += Update;
 
@@ -75,6 +81,11 @@ namespace UnityEditor.ProBuilder
                 SetPolyEditMode(PolyShape.PolyEditMode.None);
 
             ProBuilderEditor.selectModeChanged -= OnSelectModeChanged;
+#if UNITY_2019_1_OR_NEWER
+            SceneView.duringSceneGui -= DuringSceneGUI;
+#else
+            SceneView.onSceneGUIDelegate -= DuringSceneGUI;
+#endif
             DestroyImmediate(m_LineMesh);
             DestroyImmediate(m_LineMaterial);
             EditorApplication.update -= Update;
@@ -241,7 +252,7 @@ namespace UnityEditor.ProBuilder
             ProBuilderEditor.Refresh();
         }
 
-        void OnSceneGUI()
+        void DuringSceneGUI(SceneView sceneView)
         {
             if (polygon.polyEditMode == PolyShape.PolyEditMode.None)
                 return;
@@ -290,10 +301,25 @@ namespace UnityEditor.ProBuilder
             if (EditorHandleUtility.SceneViewInUse(evt))
                 return;
 
-            int controlID = GUIUtility.GetControlID(FocusType.Passive);
-            HandleUtility.AddDefaultControl(controlID);
+            m_ControlId = GUIUtility.GetControlID(FocusType.Passive);
+            if (evt.type == EventType.Layout)
+                HandleUtility.AddDefaultControl(m_ControlId);
 
             DoPointPlacement();
+        }
+
+        // Returns a local space point,
+        Vector3 GetPointInLocalSpace(Vector3 point)
+        {
+            var trs = polygon.transform;
+
+            if (polygon.isOnGrid)
+            {
+                Vector3 snapMask = ProBuilderSnapping.GetSnappingMaskBasedOnNormalVector(m_Plane.normal);
+                return trs.InverseTransformPoint(ProGridsInterface.ProGridsSnap(point, snapMask));
+            }
+
+            return trs.InverseTransformPoint(point);
         }
 
         void DoPointPlacement()
@@ -312,8 +338,7 @@ namespace UnityEditor.ProBuilder
                     if (m_Plane.Raycast(ray, out hitDistance))
                     {
                         evt.Use();
-
-                        polygon.m_Points[m_SelectedIndex] = ProGridsInterface.ProGridsSnap(polygon.transform.InverseTransformPoint(ray.GetPoint(hitDistance)), Vector3.one);
+                        polygon.m_Points[m_SelectedIndex] = GetPointInLocalSpace(ray.GetPoint(hitDistance));
                         RebuildPolyShapeMesh(false);
                         SceneView.RepaintAll();
                     }
@@ -332,7 +357,7 @@ namespace UnityEditor.ProBuilder
             }
             else if (polygon.polyEditMode == PolyShape.PolyEditMode.Path)
             {
-                if (eventType == EventType.MouseDown)
+                if (eventType == EventType.MouseDown && HandleUtility.nearestControl == m_ControlId)
                 {
                     if (polygon.m_Points.Count < 1)
                         SetupInputPlane(evt.mousePosition);
@@ -358,7 +383,7 @@ namespace UnityEditor.ProBuilder
                             polygon.transform.rotation = Quaternion.LookRotation(cameraFacingPlaneNormal) * Quaternion.Euler(new Vector3(90f, 0f, 0f));
                         }
 
-                        Vector3 point = ProGridsInterface.ProGridsSnap(polygon.transform.InverseTransformPoint(hit), Vector3.one);
+                        Vector3 point = GetPointInLocalSpace(hit);
 
                         if (polygon.m_Points.Count > 2 && Math.Approx3(polygon.m_Points[0], point))
                         {
@@ -405,7 +430,7 @@ namespace UnityEditor.ProBuilder
                         Handles.color = Color.green;
                         Handles.DotHandleCap(-1, wp, Quaternion.identity, HandleUtility.GetHandleSize(wp) * k_HandleSize, evt.type);
 
-                        if (evt.type == EventType.MouseDown)
+                        if (evt.type == EventType.MouseDown && HandleUtility.nearestControl == m_ControlId)
                         {
                             evt.Use();
 
@@ -426,13 +451,6 @@ namespace UnityEditor.ProBuilder
         void SetupInputPlane(Vector2 mousePosition)
         {
             m_Plane = EditorHandleUtility.FindBestPlane(mousePosition);
-
-            if (ProGridsInterface.SnapEnabled())
-            {
-                m_Plane.SetNormalAndPosition(
-                    m_Plane.normal,
-                    ProGridsInterface.ProGridsSnap(m_Plane.normal * -m_Plane.distance));
-            }
 
             var planeNormal = m_Plane.normal;
             var planeCenter = m_Plane.normal * -m_Plane.distance;
@@ -535,9 +553,7 @@ namespace UnityEditor.ProBuilder
                     if (EditorGUI.EndChangeCheck())
                     {
                         UndoUtility.RecordObject(polygon, "Move Polygon Shape Point");
-
-                        Vector3 snapMask = ProGridsSnapping.GetSnappingMaskBasedOnNormalVector(m_Plane.normal);
-                        polygon.m_Points[ii] = ProGridsInterface.ProGridsSnap(trs.InverseTransformPoint(point), snapMask);
+                        polygon.m_Points[ii] = GetPointInLocalSpace(point);
                         OnBeginVertexMovement();
                         RebuildPolyShapeMesh(false);
                     }
@@ -717,8 +733,6 @@ namespace UnityEditor.ProBuilder
 
         void UndoRedoPerformed()
         {
-            // If undoing after entering poly shape edit mode, make sure to also reset the Tool with the current
-            // PolyEditMode
             if (polygon.polyEditMode == PolyShape.PolyEditMode.None)
                 ProBuilderEditor.selectMode = ProBuilderEditor.selectMode & ~(SelectMode.InputTool);
             else
