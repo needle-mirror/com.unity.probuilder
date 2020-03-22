@@ -13,9 +13,10 @@ namespace UnityEngine.ProBuilder
     /// </summary>
     // The double "//" sets this component as hidden in the menu, but is used by ObjectNames.cs to get the component name.
     [AddComponentMenu("//ProBuilder MeshFilter")]
-    [DisallowMultipleComponent]
-    [ExecuteInEditMode]
-    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+    // Don't include MeshFilter in the required components because it gets registered with serialization before we have a
+    // chance to mark it with the correct HideFlags.
+    [RequireComponent(typeof(MeshRenderer))]
+    [DisallowMultipleComponent, ExecuteInEditMode, ExcludeFromPreset, ExcludeFromObjectFactory]
 //    [MonoBehaviourIcon("Packages/com.unity.probuilder/Content/Icons/Scripts/ProBuilderMesh@64.png")]
     public sealed partial class ProBuilderMesh : MonoBehaviour
     {
@@ -132,7 +133,8 @@ namespace UnityEngine.ProBuilder
         MeshRenderer m_MeshRenderer;
 
 #pragma warning disable 109
-        internal new MeshRenderer renderer {
+        internal new MeshRenderer renderer
+        {
             get
             {
                 if (!gameObject.TryGetComponent<MeshRenderer>(out m_MeshRenderer))
@@ -154,7 +156,9 @@ namespace UnityEngine.ProBuilder
                 {
                     if (!gameObject.TryGetComponent<MeshFilter>(out m_MeshFilter))
                         return null;
+#if UNITY_EDITOR
                     m_MeshFilter.hideFlags = k_MeshFilterHideFlags;
+#endif
                 }
 
                 return m_MeshFilter;
@@ -353,6 +357,8 @@ namespace UnityEngine.ProBuilder
                 if ((m_CacheValid & CacheValidState.SharedTexture) != CacheValidState.SharedTexture)
                 {
                     m_CacheValid |= CacheValidState.SharedTexture;
+                    if (m_SharedTextureLookup == null)
+                        m_SharedTextureLookup = new Dictionary<int, int>();
                     SharedVertex.GetSharedVertexLookup(m_SharedTextures, m_SharedTextureLookup);
                 }
 

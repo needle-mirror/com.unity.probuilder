@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [4.3.0-preview.4] - 2020-03-04
+## [4.3.0-preview.6] - 2020-03-23
+
+### Bug Fixes
+
+- [case: 1225223] Fixed `Mesh Collider` component missing a reference to the mesh in builds.
+- [case: 1225427] Fixed `UV Editor` exporting the UV template offset by 11 pixels when the editor window was dockable.
+- [case: 1228271] [Preview] Fixed `Shape Editor` clamping values Cylinder radius value to `.001`.
+- Fix `ProBuilderMesh.sharedTextureLookup` throwing a null reference exception when accessed from runtime.
+
+## [4.3.0-preview.5] - 2020-03-05
 
 ### Features
 
@@ -14,6 +23,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Bug Fixes
 
 - [case: 1209522] Fixed `Poly Shape` component allowing incompatible Preset feature.
+
+## [4.3.0-preview.4] - 2020-03-04
+
+### Bug Fixes
+
 - [case: 1213742] Fixed bug where `Delete` menu item would incorrectly shows as available with no selection.
 - [case: 1192479] Fixed an issue where translating UV positions in the `UV Editor` with a handle would not update the Inspector offset values.
 - [case: 1176370] Fixed entering Play Mode with the `Shape Editor` open creating a new shape in the scene.
