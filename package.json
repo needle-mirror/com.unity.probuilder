@@ -1,7 +1,7 @@
 {
   "name": "com.unity.probuilder",
   "displayName": "ProBuilder",
-  "version": "4.3.0-preview.8",
+  "version": "4.3.0-preview.9",
   "unity": "2018.3",
   "description": "Build, edit, and texture custom geometry in Unity. Use ProBuilder for in-scene level design, prototyping, collision meshes, all with on-the-fly play-testing.\n\nAdvanced features include UV editing, vertex colors, parametric shapes, and texture blending. With ProBuilder's model export feature it's easy to tweak your levels in any external 3D modelling suite.",
   "keywords": [
@@ -54,12 +54,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Unity-Technologies/com.unity.probuilder.git",
-    "revision": "1ceeda311188f321983b164eabcd915ec8b70f22"
+    "revision": "0a679b03f509476419eb86b0323df05136752b8f"
   },
   "relatedPackages": {
-    "com.unity.probuilder.tests": "4.3.0-preview.8"
+    "com.unity.probuilder.tests": "4.3.0-preview.9"
   },
   "upmCi": {
-    "footprint": "63a7c5eafd7060e86b42021d3bfc595acea4304c"
+    "footprint": "c5ca84096c1122a145d5752deef6a6e1ed6265e9"
   }
 }
