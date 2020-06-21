@@ -11,6 +11,7 @@ using UnityEngine.ProBuilder;
 using PMesh = UnityEngine.ProBuilder.ProBuilderMesh;
 using UObject = UnityEngine.Object;
 using UnityEditor.SettingsManagement;
+using UnityEditor.ShortcutManagement;
 using UnityEngine.ProBuilder.MeshOperations;
 
 namespace UnityEditor.ProBuilder
@@ -389,7 +390,7 @@ namespace UnityEditor.ProBuilder
 
         void LoadSettings()
         {
-            EditorMeshHandles.ResetPreferences();
+            EditorApplication.delayCall += EditorMeshHandles.ResetPreferences;
 
             m_ScenePickerPreferences = new ScenePickerPreferences()
             {
@@ -583,12 +584,16 @@ namespace UnityEditor.ProBuilder
             DrawHandleGUI(sceneView);
 
 #if SHORTCUT_MANAGER
-            // Escape isn't assignable as a shortcut
             if (m_CurrentEvent.type == EventType.KeyDown)
             {
+                // Escape isn't assignable as a shortcut
                 if (m_CurrentEvent.keyCode == KeyCode.Escape && selectMode != SelectMode.Object)
                 {
                     selectMode = SelectMode.Object;
+
+                    m_IsDragging = false;
+                    m_IsReadyForMouseDrag = false;
+                    
                     m_CurrentEvent.Use();
                 }
             }
@@ -682,14 +687,15 @@ namespace UnityEditor.ProBuilder
                     tool.OnSceneGUI(m_CurrentEvent);
             }
 
-            if (EditorHandleUtility.SceneViewInUse(m_CurrentEvent) || m_CurrentEvent.isKey)
-            {
-                m_IsDragging = false;
+             if (EditorHandleUtility.SceneViewInUse(m_CurrentEvent))
+             {
+                 if(m_IsDragging)
+                    m_IsDragging = false;
 
-                if (GUIUtility.hotControl == m_DefaultControl)
-                    GUIUtility.hotControl = 0;
+                 if (GUIUtility.hotControl == m_DefaultControl)
+                     GUIUtility.hotControl = 0;
 
-                return;
+                 return;
             }
 
             // This prevents us from selecting other objects in the scene,
@@ -1342,8 +1348,6 @@ namespace UnityEditor.ProBuilder
                     overrideWireframe
                         ? k_DefaultSelectedRenderState & ~(EditorSelectedRenderState.Wireframe)
                         : k_DefaultSelectedRenderState);
-
-                EditorUtility.SynchronizeWithMeshFilter(mesh);
             }
 
             SceneView.RepaintAll();
