@@ -1,10 +1,12 @@
 // #define GENERATE_DESATURATED_ICONS
-#if UNITY_2019_1_OR_NEWER
-#define SHORTCUT_MANAGER
-#endif
 
 using UnityEngine;
 using UnityEngine.ProBuilder;
+#if UNITY_2020_2_OR_NEWER
+using ToolManager = UnityEditor.EditorTools.ToolManager;
+#else
+using ToolManager = UnityEditor.EditorTools.EditorTools;
+#endif
 
 namespace UnityEditor.ProBuilder
 {
@@ -220,9 +222,15 @@ namespace UnityEditor.ProBuilder
         {
             get
             {
-                return ProBuilderEditor.instance != null
-                    && ProBuilderEditor.selectMode.ContainsFlag(validSelectModes)
-                    && !ProBuilderEditor.selectMode.ContainsFlag(SelectMode.InputTool);
+                var b1 = ProBuilderEditor.instance != null;
+                var b2 = ProBuilderEditor.selectMode.ContainsFlag(validSelectModes);
+                var b3 = !ProBuilderEditor.selectMode.ContainsFlag(SelectMode.InputTool);
+                var b4 = typeof(VertexManipulationTool).IsAssignableFrom(ToolManager.activeToolType);
+                //Disable the menu action whenever a custom EditorTool is enabled
+                return b1
+                       && b2
+                       && b3
+                       && b4;
             }
         }
 
@@ -282,7 +290,7 @@ namespace UnityEditor.ProBuilder
         /// <param name="optionsRect"></param>
         /// <param name="layoutOptions"></param>
         /// <returns></returns>
-        internal bool DoButton(bool isHorizontal, bool showOptions, ref Rect optionsRect, params GUILayoutOption[] layoutOptions)
+        internal virtual bool DoButton(bool isHorizontal, bool showOptions, ref Rect optionsRect, params GUILayoutOption[] layoutOptions)
         {
             bool wasEnabled = GUI.enabled;
             bool buttonEnabled = (menuActionState & MenuActionState.Enabled) == MenuActionState.Enabled;
@@ -356,7 +364,7 @@ namespace UnityEditor.ProBuilder
             }
         }
 
-        bool DoAltButton(params GUILayoutOption[] options)
+        protected bool DoAltButton(params GUILayoutOption[] options)
         {
             return GUILayout.Button(AltButtonContent, MenuActionStyles.altButtonStyle, options);
         }

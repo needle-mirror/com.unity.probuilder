@@ -96,6 +96,15 @@ namespace UnityEditor.ProBuilder
                 return false;
             }
 
+            if (models.Where(m => m.vertexCount > 0).Count() < 1)
+            {
+                Debug.LogWarning("Trying to export an empty model : "+name+". This model won't be exported.");
+                objContents = null;
+                mtlContents = null;
+                textures = null;
+                return false;
+            }
+
             Dictionary<Material, string> materialMap = null;
 
             if (options == null)
@@ -202,8 +211,9 @@ namespace UnityEditor.ProBuilder
                     Submesh submesh = model.submeshes[submeshIndex];
 
                     string materialName = "";
+                    var material = model.materials[submeshIndex];
 
-                    if (materialMap.TryGetValue(model.materials[submeshIndex], out materialName))
+                    if (material != null && materialMap.TryGetValue(material, out materialName))
                         sb.AppendLine(string.Format("usemtl {0}", materialName));
                     else
                         sb.AppendLine(string.Format("usemtl {0}", "null"));

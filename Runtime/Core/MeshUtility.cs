@@ -550,6 +550,39 @@ namespace UnityEngine.ProBuilder
                 mesh.SetTriangles(tris[i], i);
         }
 
+        /// <summary>
+        /// Scale mesh vertices to fit within a bounds size.
+        /// </summary>
+        /// <param name="mesh">The mesh to apply scaling to.</param>
+        /// <param name="size">The size to fit mesh contents within.</param>
+        public static void FitToSize(ProBuilderMesh mesh, Vector3 size)
+        {
+            if (mesh.vertexCount < 1)
+                return;
+
+            var scale = size.DivideBy(mesh.mesh.bounds.size);
+            if (scale == Vector3.one)
+                return;
+
+            var positions = mesh.positionsInternal;
+
+            if (System.Math.Abs(mesh.mesh.bounds.size.x) < 0.001f)
+                scale.x = 0;
+            if (System.Math.Abs(mesh.mesh.bounds.size.y) < 0.001f)
+                scale.y = 0;
+            if (System.Math.Abs(mesh.mesh.bounds.size.z) < 0.001f)
+                scale.z = 0;
+
+            for (int i = 0, c = mesh.vertexCount; i < c; i++)
+            {
+                positions[i] -= mesh.mesh.bounds.center;
+                positions[i].Scale(scale);
+            }
+
+            mesh.ToMesh();
+            mesh.Rebuild();
+        }
+
         internal static string SanityCheck(ProBuilderMesh mesh)
         {
             return SanityCheck(mesh.GetVertices());

@@ -67,15 +67,6 @@ namespace UnityEngine.ProBuilder
     }
 
     /// <summary>
-    /// Describes the type of pivot ProBuilder would automatically assign on primitive creation.
-    /// </summary>
-    public enum PivotLocation
-    {
-        Center,
-        FirstVertex
-    }
-
-    /// <summary>
     /// Functions for creating ProBuilderMesh primitives.
     /// </summary>
     public static class ShapeGenerator
@@ -1335,6 +1326,9 @@ namespace UnityEngine.ProBuilder
 
             pb.gameObject.name = "Arch";
             pb.SetPivot(pivotType);
+
+            int removedVertexCount;
+            MeshValidation.EnsureMeshIsValid(pb, out removedVertexCount);
 
             return pb;
         }

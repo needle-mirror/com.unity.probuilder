@@ -1,18 +1,18 @@
-#if UNITY_2019_1_OR_NEWER
-#define SHORTCUT_MANAGER
-#endif
-
 using System;
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using UnityEditor.ProBuilder.Actions;
 using UnityEngine.ProBuilder;
 using PMesh = UnityEngine.ProBuilder.ProBuilderMesh;
 using UObject = UnityEngine.Object;
 using UnityEditor.SettingsManagement;
-using UnityEditor.ShortcutManagement;
-using UnityEngine.ProBuilder.MeshOperations;
+#if UNITY_2020_2_OR_NEWER
+using EditorToolManager = UnityEditor.EditorTools.EditorToolManager;
+using ToolManager = UnityEditor.EditorTools.ToolManager;
+#else
+using EditorToolManager = UnityEditor.EditorTools.EditorToolContext;
+using ToolManager = UnityEditor.EditorTools.EditorTools;
+#endif
 
 namespace UnityEditor.ProBuilder
 {
@@ -44,34 +44,44 @@ namespace UnityEditor.ProBuilder
         /// </value>
         public static event Action<IEnumerable<ProBuilderMesh>> beforeMeshModification;
 
-        internal static EditorToolbar s_EditorToolbar;
+        EditorToolbar m_Toolbar;
+        ProBuilderToolManager m_ToolManager; // never use this directly! use toolManager getter to avoid problems with multiple editor instances
+        static ProBuilderToolManager toolManager => s_Instance != null ? s_Instance.m_ToolManager : null;
+        internal EditorToolbar toolbar => m_Toolbar; // used by unit tests
         static ProBuilderEditor s_Instance;
+        static Pref<SelectMode> s_LastActiveSelectMode = new Pref<SelectMode>("editor.lastActiveSelectMode", SelectMode.Face);
 
         GUIContent[] m_EditModeIcons;
         GUIStyle VertexTranslationInfoStyle;
 
-        [UserSetting("General", "Show Scene Info", "Toggle the display of information about selected meshes in the Scene View.")]
+        [UserSetting("General", "Show Scene Info",
+            "Toggle the display of information about selected meshes in the Scene View.")]
         static Pref<bool> s_ShowSceneInfo = new Pref<bool>("editor.showSceneInfo", false);
 
         [UserSetting("Toolbar", "Icon GUI", "Toggles the ProBuilder window interface between text and icon versions.")]
         internal static Pref<bool> s_IsIconGui = new Pref<bool>("editor.toolbarIconGUI", false);
 
-#if !SHORTCUT_MANAGER
-        [UserSetting("Toolbar", "Unique Mode Shortcuts", "When off, the G key toggles between Object and Element modes and H enumerates the element modes.  If on, G, H, J, and K are shortcuts to Object, Vertex, Edge, and Face modes respectively.")]
-        internal static Pref<bool> s_UniqueModeShortcuts = new Pref<bool>("editor.uniqueModeShortcuts", false, SettingsScope.User);
-#endif
+        [UserSetting("Mesh Editing", "Allow non-manifold actions",
+            "Enables advanced mesh editing techniques that may create non-manifold geometry.")]
+        internal static Pref<bool> s_AllowNonManifoldActions =
+            new Pref<bool>("editor.allowNonManifoldActions", false, SettingsScope.User);
 
-        [UserSetting("Mesh Editing", "Allow non-manifold actions", "Enables advanced mesh editing techniques that may create non-manifold geometry.")]
-        internal static Pref<bool> s_AllowNonManifoldActions = new Pref<bool>("editor.allowNonManifoldActions", false, SettingsScope.User);
+        [UserSetting("Toolbar", "Toolbar Location",
+            "Where the Object, Face, Edge, and Vertex toolbar will be shown in the Scene View.")]
+        static Pref<SceneToolbarLocation> s_SceneToolbarLocation =
+            new Pref<SceneToolbarLocation>("editor.sceneToolbarLocation", SceneToolbarLocation.UpperCenter,
+                SettingsScope.User);
 
-        [UserSetting("Toolbar", "Toolbar Location", "Where the Object, Face, Edge, and Vertex toolbar will be shown in the Scene View.")]
-        static Pref<SceneToolbarLocation> s_SceneToolbarLocation = new Pref<SceneToolbarLocation>("editor.sceneToolbarLocation", SceneToolbarLocation.UpperCenter, SettingsScope.User);
+        static Pref<bool> s_WindowIsFloating = new Pref<bool>("UnityEngine.ProBuilder.ProBuilderEditor-isUtilityWindow",
+            false, SettingsScope.Project);
 
-        static Pref<bool> s_WindowIsFloating = new Pref<bool>("UnityEngine.ProBuilder.ProBuilderEditor-isUtilityWindow", false, SettingsScope.Project);
         static Pref<bool> m_BackfaceSelectEnabled = new Pref<bool>("editor.backFaceSelectEnabled", false);
-        static Pref<RectSelectMode> m_DragSelectRectMode = new Pref<RectSelectMode>("editor.dragSelectRectMode", RectSelectMode.Partial);
-        static Pref<SelectionModifierBehavior> m_SelectModifierBehavior = new Pref<SelectionModifierBehavior>("editor.rectSelectModifier", SelectionModifierBehavior.Difference);
-        static Pref<SelectMode> s_SelectMode = new Pref<SelectMode>("editor.selectMode", SelectMode.Object);
+
+        static Pref<RectSelectMode> m_DragSelectRectMode =
+            new Pref<RectSelectMode>("editor.dragSelectRectMode", RectSelectMode.Partial);
+
+        static Pref<SelectionModifierBehavior> m_SelectModifierBehavior =
+            new Pref<SelectionModifierBehavior>("editor.rectSelectModifier", SelectionModifierBehavior.Difference);
 
         internal static RectSelectMode rectSelectMode
         {
@@ -116,7 +126,7 @@ namespace UnityEditor.ProBuilder
 
                 m_BackfaceSelectEnabled.SetValue(value, true);
 
-                if(s_Instance != null)
+                if (s_Instance != null)
                     s_Instance.m_ScenePickerPreferences.cullMode = value ? CullingMode.None : CullingMode.Back;
             }
         }
@@ -124,10 +134,6 @@ namespace UnityEditor.ProBuilder
         // used for 'g' key shortcut to swap between object/vef modes
         SelectMode m_LastComponentMode;
 
-#if !SHORTCUT_MANAGER
-        [UserSetting]
-        internal static Pref<Shortcut[]> s_Shortcuts = new Pref<Shortcut[]>("editor.sceneViewShortcuts", Shortcut.DefaultShortcuts().ToArray());
-#endif
         GUIStyle m_CommandStyle;
         Rect m_ElementModeToolbarRect = new Rect(3, 6, 128, 24);
 
@@ -137,20 +143,18 @@ namespace UnityEditor.ProBuilder
         ScenePickerPreferences m_ScenePickerPreferences;
 
         [UserSetting("Graphics", "Show Hover Highlight", "Highlight the mesh element nearest to the mouse cursor.")]
-        static Pref<bool> s_ShowHoverHighlight = new Pref<bool>("editor.showPreselectionHighlight", true, SettingsScope.User);
+        static Pref<bool> s_ShowHoverHighlight =
+            new Pref<bool>("editor.showPreselectionHighlight", true, SettingsScope.User);
 
-        Tool m_CurrentTool = Tool.Move;
         Vector2 m_InitialMousePosition;
         Rect m_MouseDragRect;
         bool m_IsDragging;
+
         bool m_IsReadyForMouseDrag;
+
         // prevents leftClickUp from stealing focus after double click
         bool m_WasDoubleClick;
         // vertex handles
-#if !SHORTCUT_MANAGER
-        bool m_IsRightMouseDown;
-#endif
-        static Dictionary<Type, VertexManipulationTool> s_EditorTools = new Dictionary<Type, VertexManipulationTool>();
 
         Vector3[][] m_VertexPositions;
         Vector3[] m_VertexOffset;
@@ -160,10 +164,6 @@ namespace UnityEditor.ProBuilder
         Rect m_SceneInfoRect = new Rect(10, 10, 200, 40);
 
         bool m_wasSelectingPath;
-
-#if !UNITY_2018_2_OR_NEWER
-        static MethodInfo s_ResetOnSceneGUIState = null;
-#endif
 
         // All selected pb_Objects
         internal List<ProBuilderMesh> selection
@@ -176,82 +176,38 @@ namespace UnityEditor.ProBuilder
         internal bool isFloatingWindow { get; private set; }
 
         /// <value>
-        /// Get the current @"UnityEngine.ProBuilder.EditLevel".
-        /// </value>
-        [Obsolete]
-        internal static EditLevel editLevel
-        {
-            get { return s_Instance != null ? EditorUtility.GetEditLevel(s_SelectMode) : EditLevel.Top; }
-        }
-
-        /// <summary>
-        /// Get the current @"UnityEngine.ProBuilder.SelectMode".
-        /// </summary>
-        /// <value>The ComponentMode currently set.</value>
-        [Obsolete]
-        internal static ComponentMode componentMode
-        {
-            get { return s_Instance != null ? EditorUtility.GetComponentMode(s_SelectMode) : ComponentMode.Face; }
-        }
-
-        /// <value>
         /// Get and set the current SelectMode.
         /// </value>
         public static SelectMode selectMode
         {
             get
             {
-                if (s_Instance != null)
-                    return s_SelectMode;
-
                 // for backwards compatibility reasons `Object` is returned when editor is closed
+                if (s_Instance != null)
+                    return ProBuilderToolManager.selectMode;
                 return SelectMode.Object;
             }
 
             set
             {
-                if (s_Instance == null)
-                    return;
-
-                var previous = s_SelectMode.value;
-
-                if (previous == value)
-                    return;
-
-                s_SelectMode.SetValue(value, true);
-
-                if (previous == SelectMode.Edge || previous == SelectMode.Vertex || previous == SelectMode.Face)
-                    s_Instance.m_LastComponentMode = previous;
-
-                if (value == SelectMode.Object)
-                    Tools.current = s_Instance.m_CurrentTool;
-
-                if (selectModeChanged != null)
-                    selectModeChanged(value);
-
+                toolManager?.SetSelectMode(value);
                 Refresh();
             }
         }
 
-        Stack<SelectMode> m_SelectModeHistory = new Stack<SelectMode>();
-
-        internal static void PushSelectMode(SelectMode mode)
+        /// <summary>
+        /// Set the <see cref="SelectMode"/> to the last used mesh element mode.
+        /// </summary>
+        public static void ResetToLastSelectMode()
         {
-            s_Instance.m_SelectModeHistory.Push(selectMode);
-            selectMode = mode;
+            toolManager?.ResetToLastSelectMode();
+            Refresh();
         }
 
-        internal static void PopSelectMode()
+        // used by tests for pre-override tools
+        internal static void SyncEditorToolSelectMode()
         {
-            if (s_Instance.m_SelectModeHistory.Count < 1)
-                return;
-            selectMode = s_Instance.m_SelectModeHistory.Pop();
-        }
-
-        internal static void ResetToLastSelectMode()
-        {
-            if (s_Instance != null)
-                selectMode = s_Instance.m_LastComponentMode;
+            toolManager?.ForwardBuiltinToolCheck();
         }
 
         static class SceneStyles
@@ -294,36 +250,34 @@ namespace UnityEditor.ProBuilder
 
         internal static void MenuOpenWindow()
         {
-            ProBuilderEditor editor = (ProBuilderEditor)EditorWindow.GetWindow(typeof(ProBuilderEditor),
+            ProBuilderEditor editor = (ProBuilderEditor) GetWindow(typeof(ProBuilderEditor),
                     s_WindowIsFloating, PreferenceKeys.pluginTitle,
                     true); // open as floating window
             editor.isFloatingWindow = s_WindowIsFloating;
         }
 
-        void OnBecameVisible()
-        {
-            // fixes maximizing/unmaximizing
-            s_Instance = this;
-        }
-
         void OnEnable()
         {
-            s_Instance = this;
+            // maximize does this weird crap where it doesn't disable or enable windows in the current layout when
+            // entering or exiting maximized mode, but _does_ Enable/Disable the new maximized window instance. when
+            // that happens the ProBuilderEditor loses the s_Instance due to that maximized instance taking over.
+            // so in order to prevent the problems that occur when multiple instances of ProBuilderEditor, instead
+            // ensure that there is always one true instance. we'll also skip initializing what are basically singleton
+            // managers as well (ex, tool manager)
+            if(s_Instance == null)
+                s_Instance = this;
 
-#if UNITY_2019_1_OR_NEWER
+            ProBuilderToolManager.selectModeChanged += OnSelectModeChanged;
+
+            m_Toolbar = new EditorToolbar(this);
+            m_ToolManager = s_Instance == this ? new ProBuilderToolManager() : null;
+
             SceneView.duringSceneGui += OnSceneGUI;
-#else
-            SceneView.onSceneGUIDelegate += OnSceneGUI;
-#endif
             ProGridsInterface.SubscribePushToGridEvent(PushToGrid);
             ProGridsInterface.SubscribeToolbarEvent(ProGridsToolbarOpen);
             MeshSelection.objectSelectionChanged += OnObjectSelectionChanged;
 
             ProGridsToolbarOpen(ProGridsInterface.SceneToolbarIsExtended());
-
-#if !UNITY_2018_2_OR_NEWER
-            s_ResetOnSceneGUIState = typeof(SceneView).GetMethod("ResetOnSceneGUIState", BindingFlags.Instance | BindingFlags.NonPublic);
-#endif
 
             VertexManipulationTool.beforeMeshModification += BeforeMeshModification;
             VertexManipulationTool.afterMeshModification += AfterMeshModification;
@@ -333,19 +287,13 @@ namespace UnityEditor.ProBuilder
             EditorApplication.delayCall += () => UpdateSelection();
             SetOverrideWireframe(true);
 
-            if (selectModeChanged != null)
-                selectModeChanged(selectMode);
+            selectMode = s_LastActiveSelectMode;
         }
 
         void OnDisable()
         {
-            s_Instance = null;
-
             VertexManipulationTool.beforeMeshModification -= BeforeMeshModification;
             VertexManipulationTool.afterMeshModification -= AfterMeshModification;
-
-            if (s_EditorToolbar != null)
-                DestroyImmediate(s_EditorToolbar);
 
             ClearElementSelection();
 
@@ -354,21 +302,27 @@ namespace UnityEditor.ProBuilder
             if (selectionUpdated != null)
                 selectionUpdated(null);
 
-#if UNITY_2019_1_OR_NEWER
             SceneView.duringSceneGui -= OnSceneGUI;
-#else
-            SceneView.onSceneGUIDelegate -= OnSceneGUI;
-#endif
             ProGridsInterface.UnsubscribePushToGridEvent(PushToGrid);
             ProGridsInterface.UnsubscribeToolbarEvent(ProGridsToolbarOpen);
             MeshSelection.objectSelectionChanged -= OnObjectSelectionChanged;
 
             SetOverrideWireframe(false);
-
-            if (selectModeChanged != null)
-                selectModeChanged(SelectMode.Object);
+            m_Toolbar.Dispose();
+            if(m_ToolManager != null)
+                m_ToolManager.Dispose();
+            ProBuilderToolManager.selectModeChanged -= OnSelectModeChanged;
 
             SceneView.RepaintAll();
+
+            if(s_Instance == this)
+                s_Instance = null;
+        }
+
+        void OnSelectModeChanged()
+        {
+            if (selectModeChanged != null)
+                selectModeChanged(ProBuilderToolManager.selectMode);
         }
 
         void BeforeMeshModification(IEnumerable<ProBuilderMesh> meshes)
@@ -400,17 +354,10 @@ namespace UnityEditor.ProBuilder
                 selectionModifierBehavior = m_SelectModifierBehavior,
                 rectSelectMode = m_DragSelectRectMode
             };
-
-#if !SHORTCUT_MANAGER
-            // workaround for old single-key shortcuts
-            if (s_Shortcuts.value == null || s_Shortcuts.value.Length < 1)
-                s_Shortcuts.SetValue(Shortcut.DefaultShortcuts().ToArray(), true);
-#endif
         }
 
         void InitGUI()
         {
-            OpenEditorToolbar();
             VertexTranslationInfoStyle = new GUIStyle();
             VertexTranslationInfoStyle.normal.background = EditorGUIUtility.whiteTexture;
             VertexTranslationInfoStyle.normal.textColor = new Color(1f, 1f, 1f, .6f);
@@ -431,7 +378,7 @@ namespace UnityEditor.ProBuilder
 
         void OnGUI()
         {
-            if (s_EditorToolbar != null && s_EditorToolbar.isIconMode != s_IsIconGui.value)
+            if (m_Toolbar.isIconMode != s_IsIconGui.value)
                 IconModeChanged();
 
             if (m_CommandStyle == null)
@@ -447,16 +394,6 @@ namespace UnityEditor.ProBuilder
                     menu.ShowAsContext();
                     break;
 
-#if !SHORTCUT_MANAGER
-                case EventType.KeyDown:
-                    if (s_Shortcuts.value.Any(x => x.Matches(e.keyCode, e.modifiers)))
-                        e.Use();
-                    break;
-
-                case EventType.KeyUp:
-                    ShortcutCheck(e);
-                    break;
-#else
                 case EventType.KeyUp:
                     if (e.keyCode == KeyCode.Escape)
                     {
@@ -464,39 +401,15 @@ namespace UnityEditor.ProBuilder
                         e.Use();
                     }
                     break;
-#endif
             }
 
-            if (s_EditorToolbar != null)
-            {
-                s_EditorToolbar.OnGUI();
-            }
-            else
-            {
-                try
-                {
-                    InitGUI();
-                }
-                catch (System.Exception exception)
-                {
-                    Debug.LogWarning(string.Format("Failed initializing ProBuilder Toolbar:\n{0}", exception.ToString()));
-                }
-            }
-        }
-
-        void OpenEditorToolbar()
-        {
-            if (s_EditorToolbar != null)
-                DestroyImmediate(s_EditorToolbar);
-
-            s_EditorToolbar = ScriptableObject.CreateInstance<EditorToolbar>();
-            s_EditorToolbar.hideFlags = HideFlags.HideAndDontSave;
-            s_EditorToolbar.InitWindowProperties(this);
+            m_Toolbar.OnGUI();
         }
 
         void IconModeChanged()
         {
-            OpenEditorToolbar();
+            m_Toolbar.Dispose();
+            m_Toolbar = new EditorToolbar(this);
         }
 
         void Menu_ToggleIconMode()
@@ -534,49 +447,12 @@ namespace UnityEditor.ProBuilder
             {
                 return s_Instance == null
                     ? null
-                    : s_Instance.GetToolForSelectMode(s_Instance.m_CurrentTool, s_SelectMode);
-            }
-        }
-
-        VertexManipulationTool GetTool<T>() where T : VertexManipulationTool, new()
-        {
-            VertexManipulationTool tool;
-
-            if (s_EditorTools.TryGetValue(typeof(T), out tool))
-                return tool;
-            tool = new T();
-            s_EditorTools.Add(typeof(T), tool);
-            return tool;
-        }
-
-        VertexManipulationTool GetToolForSelectMode(Tool tool, SelectMode mode)
-        {
-            switch (tool)
-            {
-                case Tool.Move:
-                    return mode.IsTextureMode()
-                        ? GetTool<TextureMoveTool>()
-                        : GetTool<PositionMoveTool>();
-                case Tool.Rotate:
-                    return mode.IsTextureMode()
-                        ? GetTool<TextureRotateTool>()
-                        : GetTool<PositionRotateTool>();
-                case Tool.Scale:
-                    return mode.IsTextureMode()
-                        ? GetTool<TextureScaleTool>()
-                        : GetTool<PositionScaleTool>();
-                default:
-                    return null;
+                    : (VertexManipulationTool) EditorToolManager.activeTool;
             }
         }
 
         void OnSceneGUI(SceneView sceneView)
         {
-#if !UNITY_2018_2_OR_NEWER
-            if (s_ResetOnSceneGUIState != null)
-                s_ResetOnSceneGUIState.Invoke(sceneView, null);
-#endif
-
             SceneStyles.Init();
 
             m_CurrentEvent = Event.current;
@@ -585,7 +461,6 @@ namespace UnityEditor.ProBuilder
 
             DrawHandleGUI(sceneView);
 
-#if SHORTCUT_MANAGER
             if (m_CurrentEvent.type == EventType.KeyDown)
             {
                 // Escape isn't assignable as a shortcut
@@ -595,32 +470,10 @@ namespace UnityEditor.ProBuilder
 
                     m_IsDragging = false;
                     m_IsReadyForMouseDrag = false;
-                    
+
                     m_CurrentEvent.Use();
                 }
             }
-#else
-            if (m_CurrentEvent.type == EventType.MouseDown && m_CurrentEvent.button == 1)
-                m_IsRightMouseDown = true;
-
-            if (m_CurrentEvent.type == EventType.MouseUp && m_CurrentEvent.button == 1 || m_CurrentEvent.type == EventType.Ignore)
-                m_IsRightMouseDown = false;
-
-            if (!m_IsRightMouseDown && (m_CurrentEvent.type == EventType.KeyUp ? m_CurrentEvent.keyCode : KeyCode.None) != KeyCode.None)
-            {
-                if (ShortcutCheck(m_CurrentEvent))
-                {
-                    m_CurrentEvent.Use();
-                    return;
-                }
-            }
-
-            if (m_CurrentEvent.type == EventType.KeyDown)
-            {
-                if (s_Shortcuts.value.Any(x => x.Matches(m_CurrentEvent.keyCode, m_CurrentEvent.modifiers)))
-                    m_CurrentEvent.Use();
-            }
-#endif
 
             if (selectMode == SelectMode.Object)
                 return;
@@ -647,7 +500,6 @@ namespace UnityEditor.ProBuilder
                 }
             }
             m_wasSelectingPath = pathSelectionModifier;
-
 
             if (Tools.current == Tool.View)
                 return;
@@ -682,20 +534,6 @@ namespace UnityEditor.ProBuilder
                             break;
                     }
                     break;
-            }
-
-            // Overrides the toolbar transform tools
-            if (Tools.current != Tool.None && Tools.current != m_CurrentTool)
-                SetTool_Internal(Tools.current);
-
-            Tools.current = Tool.None;
-
-            if (selectMode.IsMeshElementMode() && MeshSelection.selectedVertexCount > 0)
-            {
-                var tool = GetToolForSelectMode(m_CurrentTool, s_SelectMode);
-
-                if (tool != null)
-                    tool.OnSceneGUI(m_CurrentEvent);
             }
 
              if (EditorHandleUtility.SceneViewInUse(m_CurrentEvent))
@@ -1038,7 +876,6 @@ namespace UnityEditor.ProBuilder
                         break;
 
                     default:
-                    case SceneToolbarLocation.UpperCenter:
                         m_ElementModeToolbarRect.x = (screenWidth / 2 - 64);
                         m_ElementModeToolbarRect.y = 10;
                         break;
@@ -1074,175 +911,13 @@ namespace UnityEditor.ProBuilder
             }
         }
 
-#if !SHORTCUT_MANAGER
-        internal bool ShortcutCheck(Event e)
-        {
-            List<Shortcut> matches = s_Shortcuts.value.Where(x => x.Matches(e.keyCode, e.modifiers)).ToList();
-
-            if (matches.Count < 1)
-                return false;
-
-            bool used = false;
-            Shortcut usedShortcut = null;
-
-            foreach (Shortcut cut in matches)
-            {
-                if (AllLevelShortcuts(cut))
-                {
-                    used = true;
-                    usedShortcut = cut;
-                    break;
-                }
-            }
-
-            if (!used)
-            {
-                foreach (Shortcut cut in matches)
-                    used |= GeoLevelShortcuts(cut);
-            }
-
-            if (used)
-                Event.current.Use();
-
-            if (usedShortcut != null)
-                EditorUtility.ShowNotification(usedShortcut.action);
-
-            return used;
-        }
-
-        bool AllLevelShortcuts(Shortcut shortcut)
-        {
-            switch (shortcut.action)
-            {
-                // TODO Remove once a workaround for non-upper-case shortcut chars is found
-                case "Toggle Geometry Mode":
-
-                    if (selectMode == SelectMode.Object)
-                        selectMode = m_LastComponentMode;
-                    else
-                        selectMode = SelectMode.Object;
-                    EditorUtility.ShowNotification(selectMode.ToString() + " Editing");
-                    return true;
-
-                case "Vertex Mode":
-                {
-                    if (!s_UniqueModeShortcuts)
-                        return false;
-                    selectMode = SelectMode.Vertex;
-                    return true;
-                }
-
-                case "Edge Mode":
-                {
-                    if (!s_UniqueModeShortcuts)
-                        return false;
-                    selectMode = SelectMode.Edge;
-                    return true;
-                }
-
-                case "Face Mode":
-                {
-                    if (!s_UniqueModeShortcuts)
-                        return false;
-                    selectMode = SelectMode.Face;
-                    return true;
-                }
-
-                default:
-                    return false;
-            }
-        }
-
-        bool GeoLevelShortcuts(Shortcut shortcut)
-        {
-            switch (shortcut.action)
-            {
-                case "Escape":
-                    ClearElementSelection();
-                    EditorUtility.ShowNotification("Top Level");
-                    UpdateSelection();
-                    selectMode = SelectMode.Object;
-                    return true;
-
-                // Used to be (incorrectly) named handle pivot, and since shortcuts are serialized this value is still valid
-                case "Toggle Handle Pivot":
-                case "Toggle Handle Orientation":
-                    VertexManipulationTool.handleOrientation = InternalUtility.NextEnumValue(VertexManipulationTool.handleOrientation);
-                    return true;
-
-                // TODO Remove once a workaround for non-upper-case shortcut chars is found
-                case "Toggle Selection Mode":
-                    if (s_UniqueModeShortcuts)
-                        return false;
-                    ToggleSelectionMode();
-                    EditorUtility.ShowNotification(selectMode.ToString());
-                    return true;
-
-                case "Delete Face":
-                    EditorUtility.ShowNotification(EditorToolbarLoader.GetInstance<DeleteFaces>().DoAction().notification);
-                    return true;
-
-                case "Set Pivot":
-
-                    if (selection.Count > 0)
-                    {
-                        foreach (ProBuilderMesh pbo in selection)
-                        {
-                            UndoUtility.RecordObjects(new UObject[2] { pbo, pbo.transform }, "Set Pivot");
-
-                            if (pbo.selectedIndexesInternal.Length > 0)
-                            {
-                                pbo.CenterPivot(pbo.selectedIndexesInternal);
-                            }
-                            else
-                            {
-                                pbo.CenterPivot(null);
-                            }
-                        }
-
-                        EditorUtility.ShowNotification("Set Pivot");
-                    }
-
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-#endif
-
-        /// <summary>
-        /// Allows another window to tell the Editor what Tool is now in use. Does *not* update any other windows.
-        /// </summary>
-        /// <param name="newTool"></param>
-        internal void SetTool(Tool newTool)
-        {
-            m_CurrentTool = newTool;
-        }
-
-        /// <summary>
-        /// Calls SetTool(), then Updates the UV Editor window if applicable.
-        /// </summary>
-        /// <param name="newTool"></param>
-        void SetTool_Internal(Tool newTool)
-        {
-            SetTool(newTool);
-
-            if (UVEditor.instance != null)
-                UVEditor.instance.SetTool(newTool);
-        }
-
         /// <summary>
         /// Toggles between the SelectMode values and updates the graphic handles as necessary.
         /// </summary>
         internal void ToggleSelectionMode()
         {
-            if (s_SelectMode == SelectMode.Vertex)
-                selectMode = SelectMode.Edge;
-            else if (s_SelectMode == SelectMode.Edge)
-                selectMode = SelectMode.Face;
-            else if (s_SelectMode == SelectMode.Face)
-                selectMode = SelectMode.Vertex;
+            ProBuilderToolManager.NextMeshSelectMode();
+            Refresh();
         }
 
         void UpdateSelection(bool selectionChanged = true)
@@ -1250,13 +925,12 @@ namespace UnityEditor.ProBuilder
             UpdateMeshHandles(selectionChanged);
 
             if (selectionChanged)
-            {
-                MeshSelection.OnComponentSelectionChanged();
                 UpdateSceneInfo();
-            }
 
             if (selectionUpdated != null)
                 selectionUpdated(selection);
+
+            Repaint();
         }
 
         internal static void UpdateMeshHandles(bool selectionOrVertexCountChanged = true)
@@ -1295,46 +969,6 @@ namespace UnityEditor.ProBuilder
                 pb.ClearSelection();
 
             m_Hovering.Clear();
-        }
-
-        /// <summary>
-        /// If dragging a texture aroudn, this method ensures that if it's a member of a texture group it's cronies are also selected
-        /// </summary>
-        void VerifyTextureGroupSelection()
-        {
-            bool selectionModified = false;
-
-            foreach (ProBuilderMesh mesh in selection)
-            {
-                List<int> alreadyChecked = new List<int>();
-
-                foreach (Face f in mesh.selectedFacesInternal)
-                {
-                    int tg = f.textureGroup;
-
-                    if (tg > 0 && !alreadyChecked.Contains(f.textureGroup))
-                    {
-                        foreach (Face j in mesh.facesInternal)
-                        {
-                            if (j != f && j.textureGroup == tg && !mesh.selectedFacesInternal.Contains(j))
-                            {
-                                List<Face> newFaceSection = new List<Face>();
-                                foreach (Face jf in mesh.facesInternal)
-                                    if (jf.textureGroup == tg)
-                                        newFaceSection.Add(jf);
-                                mesh.SetSelectedFaces(newFaceSection.ToArray());
-                                selectionModified = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    alreadyChecked.Add(f.textureGroup);
-                }
-            }
-
-            if (selectionModified)
-                UpdateSelection(true);
         }
 
         void OnObjectSelectionChanged()
@@ -1397,38 +1031,6 @@ namespace UnityEditor.ProBuilder
             bool active = ProGridsInterface.IsActive();
             m_SceneInfoRect.y = active && !menuOpen ? 28 : 10;
             m_SceneInfoRect.x = active ? (menuOpen ? 64 : 8) : 10;
-        }
-
-        /// <summary>
-        /// A tool, any tool, has just been engaged while in texture mode
-        /// </summary>
-        internal void OnBeginTextureModification()
-        {
-            VerifyTextureGroupSelection();
-        }
-
-        /// <summary>
-        /// Returns the first selected pb_Object and pb_Face, or false if not found.
-        /// </summary>
-        /// <param name="pb"></param>
-        /// <param name="face"></param>
-        /// <returns></returns>
-        internal bool GetFirstSelectedFace(out ProBuilderMesh pb, out Face face)
-        {
-            pb = null;
-            face = null;
-
-            if (selection.Count < 1)
-                return false;
-
-            pb = selection.FirstOrDefault(x => x.selectedFaceCount > 0);
-
-            if (pb == null)
-                return false;
-
-            face = pb.selectedFacesInternal[0];
-
-            return true;
         }
     }
 }

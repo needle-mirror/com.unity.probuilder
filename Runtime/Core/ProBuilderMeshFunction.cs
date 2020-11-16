@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using UnityEngine.ProBuilder.Shapes;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -59,6 +60,8 @@ namespace UnityEngine.ProBuilder
         {
             EnsureMeshFilterIsAssigned();
             EnsureMeshColliderIsAssigned();
+            //Ensure no element is selected at awake
+            ClearSelection();
 
             if (vertexCount > 0
                 && faceCount > 0
@@ -117,6 +120,7 @@ namespace UnityEngine.ProBuilder
             InvalidateSharedVertexLookup();
             InvalidateSharedTextureLookup();
             m_Colors = null;
+            m_MeshFormatVersion = k_MeshFormatVersion;
             ClearSelection();
         }
 
@@ -211,7 +215,7 @@ namespace UnityEngine.ProBuilder
             return mesh;
         }
 
-        void GeometryWithPoints(Vector3[] points)
+        internal void GeometryWithPoints(Vector3[] points)
         {
             // Wrap in faces
             Face[] f = new Face[points.Length / 4];
@@ -234,6 +238,19 @@ namespace UnityEngine.ProBuilder
             Clear();
             positions = points;
             m_Faces = f;
+            m_SharedVertices = SharedVertex.GetSharedVerticesWithPositions(points);
+            InvalidateCaches();
+            ToMesh();
+            Refresh();
+        }
+
+        /// <summary>
+        /// Rebuilds the mesh with different vertices positions but same faces
+        /// </summary>
+        /// <param name="points">New vertices positions</param>
+        internal void ReplaceVertices(Vector3[] points)
+        {
+            positions = points;
             m_SharedVertices = SharedVertex.GetSharedVerticesWithPositions(points);
             InvalidateSharedVertexLookup();
             ToMesh();
@@ -296,7 +313,8 @@ namespace UnityEngine.ProBuilder
             {
                 if (m_MeshFormatVersion < k_MeshFormatVersionSubmeshMaterialRefactor)
                     Submesh.MapFaceMaterialsToSubmeshIndex(this);
-
+                if (m_MeshFormatVersion < k_MeshFormatVersionAutoUVScaleOffset)
+                    UvUnwrapping.UpgradeAutoUVScaleOffset(this);
                 m_MeshFormatVersion = k_MeshFormatVersion;
             }
 
@@ -388,6 +406,9 @@ namespace UnityEngine.ProBuilder
 
             if ((mask & RefreshMask.Collisions) > 0)
                 EnsureMeshColliderIsAssigned();
+
+            if ((mask & RefreshMask.Bounds) > 0 && mesh != null)
+                mesh.RecalculateBounds();
         }
 
         internal void EnsureMeshColliderIsAssigned()
@@ -397,11 +418,7 @@ namespace UnityEngine.ProBuilder
 #if ENABLE_DRIVEN_PROPERTIES
                 SerializationUtility.RegisterDrivenProperty(this, collider, "m_Mesh");
 #endif
-                if (collider.sharedMesh != mesh)
-                {
-                    collider.sharedMesh = null;
-                    collider.sharedMesh = mesh;
-                }
+                collider.sharedMesh = mesh;
             }
         }
 

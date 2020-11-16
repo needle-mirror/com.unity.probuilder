@@ -1,8 +1,10 @@
 using UnityEngine.ProBuilder;
-using UnityEditor.ProBuilder;
 using UnityEngine;
-using UnityEditor;
-using UnityEditor.ProBuilder.UI;
+#if UNITY_2020_2_OR_NEWER
+using ToolManager = UnityEditor.EditorTools.ToolManager;
+#else
+using ToolManager = UnityEditor.EditorTools.EditorTools;
+#endif
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -29,7 +31,8 @@ namespace UnityEditor.ProBuilder.Actions
 
         public override ActionResult DoAction()
         {
-            ShapeEditor.MenuOpenShapeCreator();
+            ProBuilderEditor.selectMode = SelectMode.Object;
+            ToolManager.SetActiveTool<DrawShapeTool>();
             return new ActionResult(ActionResult.Status.Success, "Open Shape Editor");
         }
     }

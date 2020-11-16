@@ -24,6 +24,13 @@ namespace UnityEngine.ProBuilder
             target.triangles = mesh.selectedFacesInternal.SelectMany(x => x.indexes).ToArray();
         }
 
+        internal static void CreateFaceMeshFromFaces(ProBuilderMesh mesh, IList<Face> faces, Mesh target)
+        {
+            target.Clear();
+            target.vertices = mesh.positionsInternal;
+            target.triangles = faces.SelectMany(x => x.indexes).ToArray();
+        }
+
         internal static void CreateEdgeMesh(ProBuilderMesh mesh, Mesh target)
         {
             int edgeCount = 0;
@@ -50,7 +57,7 @@ namespace UnityEngine.ProBuilder
             }
 
             target.Clear();
-            target.indexFormat = edgeCount * 2 > ushort.MaxValue ? Rendering.IndexFormat.UInt16 : Rendering.IndexFormat.UInt32;
+            target.indexFormat = edgeCount * 2 > ushort.MaxValue ? Rendering.IndexFormat.UInt32 : Rendering.IndexFormat.UInt16;
             target.name = "ProBuilder::EdgeMesh" + target.GetInstanceID();
             target.vertices = mesh.positionsInternal;
             target.subMeshCount = 1;
@@ -77,7 +84,7 @@ namespace UnityEngine.ProBuilder
             }
 
             target.Clear();
-            target.indexFormat = vertexCount > ushort.MaxValue ? Rendering.IndexFormat.UInt16 : Rendering.IndexFormat.UInt32;
+            target.indexFormat = vertexCount > ushort.MaxValue ? Rendering.IndexFormat.UInt32 : Rendering.IndexFormat.UInt16;
             target.name = "ProBuilder::EdgeMesh" + target.GetInstanceID();
             target.vertices = mesh.positionsInternal;
             target.subMeshCount = 1;
@@ -112,7 +119,7 @@ namespace UnityEngine.ProBuilder
         {
             int vertexCount = positions.Length;
             target.Clear();
-            target.indexFormat = vertexCount > ushort.MaxValue ? Rendering.IndexFormat.UInt16 : Rendering.IndexFormat.UInt32;
+            target.indexFormat = vertexCount > ushort.MaxValue ? Rendering.IndexFormat.UInt32 : Rendering.IndexFormat.UInt16;
             target.name = "ProBuilder::PointMesh";
             target.vertices = positions;
             target.subMeshCount = 1;

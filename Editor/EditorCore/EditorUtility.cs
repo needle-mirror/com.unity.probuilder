@@ -139,12 +139,7 @@ namespace UnityEditor.ProBuilder
 
         internal static bool IsPrefab(ProBuilderMesh mesh)
         {
-#if UNITY_2018_3_OR_NEWER
             return PrefabUtility.GetPrefabAssetType(mesh.gameObject) != PrefabAssetType.NotAPrefab;
-#else
-            PrefabType type = PrefabUtility.GetPrefabType(mesh.gameObject);
-            return type == PrefabType.Prefab || type == PrefabType.PrefabInstance || type == PrefabType.DisconnectedPrefabInstance;
-#endif
         }
 
         /// <summary>
@@ -154,12 +149,8 @@ namespace UnityEditor.ProBuilder
         /// <returns></returns>
         internal static bool IsPrefabInstance(GameObject go)
         {
-#if UNITY_2018_3_OR_NEWER
             var status = PrefabUtility.GetPrefabInstanceStatus(go);
             return status == PrefabInstanceStatus.Connected || status == PrefabInstanceStatus.Disconnected;
-#else
-            return PrefabUtility.GetPrefabType(go) == PrefabType.PrefabInstance;
-#endif
         }
 
         /**
@@ -167,11 +158,7 @@ namespace UnityEditor.ProBuilder
          */
         internal static bool IsPrefabAsset(GameObject go)
         {
-#if UNITY_2018_3_OR_NEWER
             return PrefabUtility.IsPartOfPrefabAsset(go);
-#else
-            return PrefabUtility.GetPrefabType(go) == PrefabType.Prefab;
-#endif
         }
 
         /**
@@ -263,11 +250,20 @@ namespace UnityEditor.ProBuilder
         }
 
         /// <summary>
-        /// Move a GameObject to the active scene, where active scene may be a prefab stage.
+        /// Move a GameObject to the proper active root.
+        /// Checks if a default parent exists, otherwise it adds the object as a root of the active scene, which can be a prefab stage.
         /// </summary>
         /// <param name="gameObject"></param>
-        internal static void MoveToActiveScene(GameObject gameObject)
+        internal static void MoveToActiveRoot(GameObject gameObject)
         {
+#if UNITY_2020_2_OR_NEWER
+            var parent = SceneView.GetDefaultParentObjectIfSet();
+            if (parent != null)
+            {
+                gameObject.transform.SetParent(parent);
+                return;
+            }
+#endif
             var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
             var activeScene = SceneManager.GetActiveScene();
 
@@ -294,14 +290,15 @@ namespace UnityEditor.ProBuilder
         /// <param name="pb"></param>
         internal static void InitObject(ProBuilderMesh pb)
         {
-            MoveToActiveScene(pb.gameObject);
+            MoveToActiveRoot(pb.gameObject);
+
             GameObjectUtility.EnsureUniqueNameForSibling(pb.gameObject);
             ScreenCenter(pb.gameObject);
-            SetPivotLocationAndSnap(pb);
+            SnapInstantiatedObject(pb);
+
 #if UNITY_2019_1_OR_NEWER
             ComponentUtility.MoveComponentRelativeToComponent(pb, pb.transform, false);
 #endif
-
             pb.renderer.shadowCastingMode = s_ShadowCastingMode;
             pb.renderer.sharedMaterial = EditorMaterialUtility.GetUserMaterial();
 
@@ -337,17 +334,14 @@ namespace UnityEditor.ProBuilder
                 meshCreated(pb);
         }
 
-        internal static void SetPivotLocationAndSnap(ProBuilderMesh mesh)
+        // If s_SnapNewShapesToGrid is enabled, always snap to the grid size. If it is not, use the active snap  settings
+        internal static void SnapInstantiatedObject(ProBuilderMesh mesh)
         {
-            if (ProGridsInterface.SnapEnabled())
-                mesh.transform.position = ProBuilderSnapping.SnapValue(mesh.transform.position, ProGridsInterface.SnapValue());
-            else if (s_SnapNewShapesToGrid)
-                mesh.transform.position = ProBuilderSnapping.SnapValue(mesh.transform.position, new Vector3(
-                            EditorPrefs.GetFloat("MoveSnapX"),
-                            EditorPrefs.GetFloat("MoveSnapY"),
-                            EditorPrefs.GetFloat("MoveSnapZ")));
-
-            mesh.Optimize();
+            mesh.transform.position = ProBuilderSnapping.Snap(
+                mesh.transform.position,
+                s_SnapNewShapesToGrid
+                    ? EditorSnapping.worldSnapMoveValue
+                    : EditorSnapping.activeMoveSnapValue);
         }
 
         /**
@@ -430,24 +424,6 @@ namespace UnityEditor.ProBuilder
                 (int)platform == 128;
         }
 
-        /**
-         *  CreateCachedEditor didn't exist until 5.0, so recreate it's contents if necessary or pass it on.
-         */
-        internal static void CreateCachedEditor<T>(UnityEngine.Object[] targetObjects, ref UnityEditor.Editor previousEditor) where T : UnityEditor.Editor
-        {
-            #if UNITY_4_7
-            if (previousEditor != null && pbUtil.IsEqual(previousEditor.targets, targetObjects))
-                return;
-
-            if (previousEditor != null)
-                UnityEngine.Object.DestroyImmediate(previousEditor);
-
-            previousEditor = Editor.CreateEditor(targetObjects, typeof(T));
-            #else
-            UnityEditor.Editor.CreateCachedEditor(targetObjects, typeof(T), ref previousEditor);
-            #endif
-        }
-
         /// <summary>
         /// Is this mode one of the mesh element modes (vertex, edge, face, texture).
         /// </summary>
@@ -477,9 +453,9 @@ namespace UnityEditor.ProBuilder
         internal static bool IsPositionMode(this SelectMode mode)
         {
             return mode.ContainsFlag(
-                SelectMode.TextureEdge
-                | SelectMode.TextureFace
-                | SelectMode.TextureVertex
+                SelectMode.Edge
+                | SelectMode.Face
+                | SelectMode.Vertex
                 );
         }
 

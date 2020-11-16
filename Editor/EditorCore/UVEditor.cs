@@ -1,11 +1,3 @@
-#if UNITY_2019_1_OR_NEWER
-#define SHORTCUT_MANAGER
-#endif
-
-#if UNITY_5_5_OR_NEWER
-#define RETINA_ENABLED
-#endif
-
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +5,11 @@ using System.Reflection;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
 using UnityEditor.SettingsManagement;
-#if SHORTCUT_MANAGER
 using UnityEditor.ShortcutManagement;
+#if UNITY_2020_2_OR_NEWER
+using ToolManager = UnityEditor.EditorTools.ToolManager;
+#else
+using ToolManager = UnityEditor.EditorTools.EditorTools;
 #endif
 
 namespace UnityEditor.ProBuilder
@@ -72,14 +67,12 @@ namespace UnityEditor.ProBuilder
             s_GridSnapIncrement.value = SettingsGUILayout.SettingsSlider(UI.EditorGUIUtility.TempContent("Grid Size"), s_GridSnapIncrement, .015625f, 2f, searchContext);
         }
 
-#if SHORTCUT_MANAGER
         [Shortcut("ProBuilder/UV Editor/Reset Canvas", typeof(UVEditor), KeyCode.Alpha0)]
         static void ResetCanvasShortcut()
         {
             if(instance != null)
                 instance.ResetCanvas();
         }
-#endif
 
         static readonly Color DRAG_BOX_COLOR_BASIC = new Color(0f, .7f, 1f, .2f);
         static readonly Color DRAG_BOX_COLOR_PRO = new Color(0f, .7f, 1f, 1f);
@@ -178,8 +171,6 @@ namespace UnityEditor.ProBuilder
         // The first selected face's material.  Used to draw texture preview in 0,0 - 1,1 space.
         Material m_PreviewMaterial;
 
-        Tool tool = Tool.Move;
-
         GUIContent[] ToolIcons;
 
         struct ObjectElementIndex
@@ -266,6 +257,7 @@ namespace UnityEditor.ProBuilder
             ProBuilderEditor.selectModeChanged += SelectModeChanged;
             ProBuilderMesh.elementSelectionChanged += ElementSelectionChanged;
             ProBuilderMeshEditor.onGetFrameBoundsEvent += OnGetFrameBoundsEvent;
+            ToolManager.activeToolChanged += Repaint;
             Undo.undoRedoPerformed += ObjectSelectionChanged;
 
             ObjectSelectionChanged();
@@ -277,12 +269,14 @@ namespace UnityEditor.ProBuilder
         {
             instance = null;
 
-            if (ProBuilderEditor.selectMode == SelectMode.TextureFace)
-                ProBuilderEditor.ResetToLastSelectMode();
-
             if (uv2Editor != null)
                 DestroyImmediate(uv2Editor);
 
+            var selectMode = ProBuilderToolManager.selectMode;
+            if (selectMode.IsTextureMode())
+                ProBuilderEditor.selectMode = selectMode.GetPositionMode();
+
+            ToolManager.activeToolChanged -= Repaint;
             MeshSelection.objectSelectionChanged -= ObjectSelectionChanged;
             ProBuilderMesh.elementSelectionChanged -= ElementSelectionChanged;
             ProBuilderEditor.selectModeChanged -= SelectModeChanged;
@@ -376,21 +370,16 @@ namespace UnityEditor.ProBuilder
         {
             if (screenshotStatus != ScreenshotStatus.Done)
             {
-                minSize = new Vector2(ScreenRect.width, ScreenRect.height);
-                maxSize = new Vector2(ScreenRect.width, ScreenRect.height);
-
-                UI.EditorGUIUtility.DrawSolidColor(new Rect(-1, -1, ScreenRect.width + 10, ScreenRect.height + 10), screenshot_backgroundColor);
-
+                UI.EditorGUIUtility.DrawSolidColor(new Rect(-5, -5, ScreenRect.width + 10, ScreenRect.height + 10), screenshot_backgroundColor);
                 DrawUVGraph(graphRect);
 
                 if (screenshotStatus == ScreenshotStatus.PrepareCanvas)
                 {
-                    if (Event.current.type == EventType.Repaint)
+                    if(Event.current.type == EventType.Repaint)
                     {
                         screenshotStatus = ScreenshotStatus.CanvasReady;
                         DoScreenshot();
                     }
-
                     return;
                 }
                 else
@@ -399,7 +388,7 @@ namespace UnityEditor.ProBuilder
                 }
             }
 
-            if (tool == Tool.View || m_draggingCanvas)
+            if (ProBuilderToolManager.activeTool == Tool.View || m_draggingCanvas)
                 EditorGUIUtility.AddCursorRect(new Rect(0, toolbarRect.y + toolbarRect.height, screenWidth, screenHeight), MouseCursor.Pan);
 
             ScreenRect.width = this.position.width;
@@ -434,7 +423,7 @@ namespace UnityEditor.ProBuilder
             // Draw AND update translation handles
             if (channel == 0 && selection != null && MeshSelection.selectedVertexCount > 0)
             {
-                switch (tool)
+                switch (ProBuilderToolManager.activeTool)
                 {
                     case Tool.Move:
                         MoveTool();
@@ -598,7 +587,7 @@ namespace UnityEditor.ProBuilder
 
             modifyingUVs = false;
 
-            if ((tool == Tool.Rotate || tool == Tool.Scale) && userPivot)
+            if ((ProBuilderToolManager.activeTool == Tool.Rotate || ProBuilderToolManager.activeTool == Tool.Scale) && userPivot)
                 SetHandlePosition(handlePosition, true);
 
             // Regenerate UV2s
@@ -688,10 +677,10 @@ namespace UnityEditor.ProBuilder
                 //We are going to paste auto settings therefore target face
                 //should be in auto prior to paste
                 destination[0] = targetFace;
-                UVEditing.SetAutoUV(pb, destination, true);
+                UvUnwrapping.SetAutoUV(pb, destination, true);
             }
 
-            targetFace.uv = UVEditing.GetAutoUnwrapSettings(firstObj, sourceFace);
+            targetFace.uv = UvUnwrapping.GetAutoUnwrapSettings(firstObj, sourceFace);
             destination[0] = targetFace;
             targetFace.submeshIndex = sourceFace.submeshIndex;
             EditorUtility.ShowNotification("Copy UV Settings");
@@ -702,7 +691,7 @@ namespace UnityEditor.ProBuilder
                 //Ensure UV mode of target face matches source face UV mode.
                 destination[0] = targetFace;
                 pb.ToMesh();
-                UVEditing.SetAutoUV(pb, destination, false);
+                UvUnwrapping.SetAutoUV(pb, destination, false);
                 pb.Refresh();
             }
             pb.Optimize();
@@ -959,59 +948,14 @@ namespace UnityEditor.ProBuilder
                 eatNextKeyUp = false;
                 return;
             }
-
-#if SHORTCUT_MANAGER
         }
-#else
-            bool used = false;
-
-            switch (e.keyCode)
-            {
-                case KeyCode.Keypad0:
-                case KeyCode.Alpha0:
-                    ResetCanvas();
-                    e.Use();
-                    needsRepaint = true;
-                    used = true;
-                    break;
-
-                case KeyCode.Q:
-                    SetTool_Internal(Tool.View);
-                    used = true;
-                    break;
-
-                case KeyCode.W:
-                    SetTool_Internal(Tool.Move);
-                    used = true;
-                    break;
-
-                case KeyCode.E:
-                    SetTool_Internal(Tool.Rotate);
-                    used = true;
-                    break;
-
-                case KeyCode.R:
-                    SetTool_Internal(Tool.Scale);
-                    used = true;
-                    break;
-
-                case KeyCode.F:
-                    FrameSelection();
-                    used = true;
-                    break;
-            }
-
-            if (!used && ProBuilderEditor.instance)
-                ProBuilderEditor.instance.ShortcutCheck(e);
-        }
-#endif
 
         /**
          * Finds the nearest edge to the mouse and sets the `nearestEdge` struct with it's info
          */
         bool UpdateNearestElement(Vector2 mousePosition)
         {
-            if (selection == null || m_mouseDragging || modifyingUVs || tool == Tool.View) // || pb_Handle_Utility.CurrentID > -1)
+            if (selection == null || m_mouseDragging || modifyingUVs || ProBuilderToolManager.activeTool == Tool.View) // || pb_Handle_Utility.CurrentID > -1)
             {
                 if (nearestElement.valid)
                 {
@@ -1101,36 +1045,6 @@ namespace UnityEditor.ProBuilder
             }
 
             return !nearestElement.Equals(oei);
-        }
-
-        /**
-         * Allows another window to set the current tool.
-         * Does *not* update any other editor windows.
-         */
-        public void SetTool(Tool tool)
-        {
-            this.tool = tool;
-            nearestElement.Clear();
-            Repaint();
-        }
-
-        /**
-         * Sets the global Tool.current and updates any other windows.
-         */
-        private void SetTool_Internal(Tool tool)
-        {
-            SetTool(tool);
-
-            if (tool == Tool.View)
-                Tools.current = Tool.View;
-            else
-                Tools.current = Tool.None;
-
-            if (editor)
-            {
-                editor.SetTool(tool);
-                SceneView.RepaintAll();
-            }
         }
 
         bool GetFaceFromMousePosition(Vector2 mousePosition, ProBuilderMesh pb, out Face faceSelected)
@@ -1260,15 +1174,13 @@ namespace UnityEditor.ProBuilder
 
                 if (ControlKey)
                 {
-                    handlePosition = ProBuilderSnapping.SnapValue(t_handlePosition, (Vector3) new Vector3Mask((handlePosition - t_handlePosition), Math.handleEpsilon) * s_GridSnapIncrement);
+                    handlePosition = ProBuilderSnapping.Snap(t_handlePosition, (Vector3) new Vector3Mask((handlePosition - t_handlePosition), Math.handleEpsilon) * s_GridSnapIncrement);
                 }
                 else
                 {
                     handlePosition = t_handlePosition;
 
-                    /**
-                     * Attempt vertex proximity snap if shift key is held
-                     */
+                    // Attempt vertex proximity snap if shift key is held
                     if (ShiftKey)
                     {
                         float dist, minDist = MAX_PROXIMITY_SNAP_DIST_CANVAS;
@@ -1317,7 +1229,7 @@ namespace UnityEditor.ProBuilder
                 Vector2 newUVPosition = t_handlePosition;
 
                 if (ControlKey)
-                    newUVPosition = ProBuilderSnapping.SnapValue(newUVPosition, new Vector3Mask((handlePosition - t_handlePosition), Math.handleEpsilon) * s_GridSnapIncrement);
+                    newUVPosition = ProBuilderSnapping.Snap(newUVPosition, new Vector3Mask((handlePosition - t_handlePosition), Math.handleEpsilon) * s_GridSnapIncrement);
 
                 for (int n = 0; n < selection.Length; n++)
                 {
@@ -1424,7 +1336,7 @@ namespace UnityEditor.ProBuilder
                 handlePosition.y += delta.y;
 
                 if (ControlKey)
-                    handlePosition = ProBuilderSnapping.SnapValue(handlePosition, new Vector3Mask((handlePosition - handlePosition), Math.handleEpsilon) * s_GridSnapIncrement);
+                    handlePosition = ProBuilderSnapping.Snap(handlePosition, new Vector3Mask((handlePosition - handlePosition), Math.handleEpsilon) * s_GridSnapIncrement);
 
                 for (int n = 0; n < selection.Length; n++)
                 {
@@ -1456,7 +1368,7 @@ namespace UnityEditor.ProBuilder
                 }
 
                 if (ControlKey)
-                    uvRotation = ProBuilderSnapping.SnapValue(uvRotation, 15f);
+                    uvRotation = ProBuilderSnapping.Snap(uvRotation, EditorSnapping.incrementalSnapRotateValue);
 
                 // Do rotation around the handle pivot in manual mode
                 if (mode == UVMode.Mixed || mode == UVMode.Manual)
@@ -1508,7 +1420,7 @@ namespace UnityEditor.ProBuilder
             if (rotation != uvRotation)
             {
                 if (ControlKey)
-                    rotation = ProBuilderSnapping.SnapValue(rotation, 15f);
+                    rotation = ProBuilderSnapping.Snap(rotation, EditorSnapping.incrementalSnapRotateValue);
 
                 float delta = rotation - uvRotation;
                 uvRotation = rotation;
@@ -1567,7 +1479,7 @@ namespace UnityEditor.ProBuilder
             uvScale = EditorHandleUtility.ScaleHandle2d(2, UVToGUIPoint(handlePosition), uvScale, 128);
 
             if (ControlKey)
-                uvScale = ProBuilderSnapping.SnapValue(uvScale, s_GridSnapIncrement);
+                uvScale = ProBuilderSnapping.Snap(uvScale, Vector3.one * s_GridSnapIncrement);
 
             if (Math.Approx(uvScale.x, 0f, Mathf.Epsilon))
                 uvScale.x = .0001f;
@@ -1637,7 +1549,7 @@ namespace UnityEditor.ProBuilder
             previousScale.y = 1f / previousScale.y;
 
             if (ControlKey)
-                textureScale = ProBuilderSnapping.SnapValue(textureScale, s_GridSnapIncrement);
+                textureScale = ProBuilderSnapping.Snap(textureScale, Vector3.one * s_GridSnapIncrement);
 
             if (!modifyingUVs)
             {
@@ -2527,14 +2439,10 @@ namespace UnityEditor.ProBuilder
                 commandStyle = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle("Command");
 
             EditorGUI.BeginChangeCheck();
-
-            tool = (Tool)GUI.Toolbar(toolbarRect_tool, (int)tool < 0 ? 0 : (int)tool, ToolIcons, "Command");
-
+            int activeTool = (int) ProBuilderToolManager.activeTool;
+            activeTool = GUI.Toolbar(toolbarRect_tool, activeTool < 0 ? 0 : activeTool, ToolIcons, "Command");
             if (EditorGUI.EndChangeCheck())
-            {
-                SetTool_Internal(tool);
-                SceneView.RepaintAll();
-            }
+                Tools.current = (Tool) activeTool;
 
             ProBuilderEditor.selectMode = UI.EditorGUIUtility.DoElementModeToolbar(toolbarRect_select, ProBuilderEditor.selectMode);
 
@@ -2634,7 +2542,7 @@ namespace UnityEditor.ProBuilder
             }
             else if (channel == 1)
             {
-                EditorUtility.CreateCachedEditor<UnwrapParametersEditor>(selection, ref uv2Editor);
+                Editor.CreateCachedEditor(selection, typeof(UnwrapParametersEditor), ref uv2Editor);
 
                 if (uv2Editor != null)
                 {
@@ -2655,7 +2563,12 @@ namespace UnityEditor.ProBuilder
             }
 
             GUI.DragWindow(ActionWindowDragRect);
+
             actionWindowRect = UI.EditorGUILayout.DoResizeHandle(actionWindowRect, minimumInspectorWidth, minimumInspectorHeight);
+            actionWindowRect.x = Mathf.Clamp(actionWindowRect.x, 0, position.width - minimumInspectorWidth);
+            actionWindowRect.y = Mathf.Clamp(actionWindowRect.y, 0, position.height - minimumInspectorHeight);
+            actionWindowRect.width = Mathf.Clamp(actionWindowRect.width, minimumInspectorWidth, position.width - actionWindowRect.x - 8);
+            actionWindowRect.height = Mathf.Clamp(actionWindowRect.height, minimumInspectorHeight, position.height - actionWindowRect.y - 8);
         }
 
         bool modifyingUVs_AutoPanel = false;
@@ -2686,17 +2599,31 @@ namespace UnityEditor.ProBuilder
                 RefreshSelectedUVCoordinates();
             }
 
-#if UNITY_2017_3_OR_NEWER
             if (isKeyDown && Event.current.type == EventType.Used)
-#else
-            if (isKeyDown && Event.current.type == EventType.used)
-#endif
                 eatNextKeyUp = true;
         }
 
         bool tool_weldButton = false;
-
         Vector2 scroll = Vector2.zero;
+
+        static readonly GUIContent gc_PlanarProject = EditorGUIUtility.TrTextContent("Planar",
+            "Project UVs from the angle most closely matching the average selection normal.");
+        static readonly GUIContent gc_BoxProject = EditorGUIUtility.TrTextContent("Box",
+            "Project UVs from a cardinal angle most closely matching the average selection normal.");
+        static readonly GUIContent gc_SelectIsland = EditorGUIUtility.TrTextContent("Select Island",
+            "Select all UVs connected to the current selection.");
+        static readonly GUIContent gc_SelectFace = EditorGUIUtility.TrTextContent("Select Face",
+            "Select all UVs in the face of the current selection.");
+        static readonly GUIContent gc_CollapseUVs = EditorGUIUtility.TrTextContent("Collapse UVs",
+            "Merge all selected UVs to a single point.");
+        static readonly GUIContent gc_SplitUVs = EditorGUIUtility.TrTextContent("Split UVs",
+            "Separate all selected UVs to individual points.");
+        static readonly GUIContent gc_FlipHorizontal = EditorGUIUtility.TrTextContent("Flip Horizontal",
+            "Mirror UVs on the horizontal axis.");
+        static readonly GUIContent gc_FlipVertical = EditorGUIUtility.TrTextContent("Flip Vertical",
+            "Mirror UVs on the vertical axis.");
+        static readonly GUIContent gc_FitUVs = EditorGUIUtility.TrTextContent("Fit UVs",
+            "Resize the selected UVs to fit within normalized UV coordinates (0 - 1).");
 
         void DrawManualModeUI()
         {
@@ -2711,37 +2638,31 @@ namespace UnityEditor.ProBuilder
             scroll = EditorGUILayout.BeginScrollView(scroll);
             GUI.enabled = MeshSelection.selectedFaceCount > 0;
 
-            /**
-             * Projection Methods
-             */
+            // Projection Methods
             GUILayout.Label("Project UVs", EditorStyles.miniBoldLabel);
 
             GUILayout.BeginHorizontal();
 
-            if (GUILayout.Button("Planar", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_PlanarProject, EditorStyles.miniButton))
                 Menu_PlanarProject();
 
-            if (GUILayout.Button("Box", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_BoxProject, EditorStyles.miniButton))
                 Menu_BoxProject();
 
             GUILayout.EndHorizontal();
 
-            /**
-             * Selection
-             */
+            // Selection
             GUI.enabled = MeshSelection.selectedVertexCount > 0;
             GUILayout.Label("Selection", EditorStyles.miniBoldLabel);
 
-            if (GUILayout.Button("Select Island", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_SelectIsland, EditorStyles.miniButton))
                 Menu_SelectUVIsland();
 
             GUI.enabled = MeshSelection.selectedVertexCount > 0 && ProBuilderEditor.selectMode != SelectMode.Face;
-            if (GUILayout.Button("Select Face", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_SelectFace, EditorStyles.miniButton))
                 Menu_SelectUVFace();
 
-            /**
-             * Edit
-             */
+            // Edit
             GUILayout.Label("Edit", EditorStyles.miniBoldLabel);
 
             GUI.enabled = MeshSelection.selectedVertexCount > 1;
@@ -2752,24 +2673,24 @@ namespace UnityEditor.ProBuilder
                     WeldButtonGUI,
                     selection);
 
-            if (GUILayout.Button("Collapse UVs", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_CollapseUVs, EditorStyles.miniButton))
                 Menu_CollapseUVs();
 
             GUI.enabled = MeshSelection.selectedVertexCount > 1;
-            if (GUILayout.Button("Split UVs", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_SplitUVs, EditorStyles.miniButton))
                 Menu_SplitUVs();
 
             GUILayout.Space(4);
 
-            if (GUILayout.Button("Flip Horizontal", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_FlipHorizontal, EditorStyles.miniButton))
                 Menu_FlipUVs(Vector2.up);
 
-            if (GUILayout.Button("Flip Vertical", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_FlipVertical, EditorStyles.miniButton))
                 Menu_FlipUVs(Vector2.right);
 
             GUILayout.Space(4);
 
-            if (GUILayout.Button("Fit UVs", EditorStyles.miniButton))
+            if (GUILayout.Button(gc_FitUVs, EditorStyles.miniButton))
                 Menu_FitUVs();
 
             GUI.enabled = true;
@@ -3123,7 +3044,7 @@ namespace UnityEditor.ProBuilder
             foreach (ProBuilderMesh pb in selection)
             {
                 pb.ToMesh();
-                UVEditing.SetAutoUV(pb, pb.selectedFacesInternal, !isManual);
+                UvUnwrapping.SetAutoUV(pb, pb.selectedFacesInternal, !isManual);
                 pb.Refresh();
                 pb.Optimize();
             }
@@ -3339,6 +3260,8 @@ namespace UnityEditor.ProBuilder
         Texture2D screenshot;
         Rect screenshotCanvasRect = new Rect(0, 0, 0, 0);
         Vector2 screenshotTexturePosition = Vector2.zero;
+        int m_HorizontalOffset = 0;
+        int m_VerticalOffset = 0;
 
         // settings
         int screenshot_size = 1024;
@@ -3380,6 +3303,7 @@ namespace UnityEditor.ProBuilder
             DoScreenshot();
         }
 
+        bool m_Docked;
         void DoScreenshot()
         {
             switch (screenshotStatus)
@@ -3390,10 +3314,7 @@ namespace UnityEditor.ProBuilder
                     curUvPosition = uvGraphOffset;
 
                     uvGraphScale = screenshot_size / 256;
-
-#if RETINA_ENABLED
                     uvGraphScale /= EditorGUIUtility.pixelsPerPoint;
-#endif
 
                     // always begin texture grabs at bottom left
                     uvGraphOffset = new Vector2(-ScreenRect.width / 2f, ScreenRect.height / 2f);
@@ -3402,11 +3323,29 @@ namespace UnityEditor.ProBuilder
                     screenshot.hideFlags = (HideFlags)(1 | 2 | 4);
                     screenshotStatus = ScreenshotStatus.PrepareCanvas;
 
+                    m_HorizontalOffset = 0;
+
+#if UNITY_2019_3_OR_NEWER
+                    m_VerticalOffset = 0;
+#else
+                    m_VerticalOffset = 1;
+#endif
+
+                    m_Docked = (bool) ReflectionUtility.GetValue(this, this.GetType(), "docked");
                     // set the current rect pixel bounds to the largest possible size.  if some parts are out of focus, they'll be grabbed in subsequent passes
-                    if ((bool)ReflectionUtility.GetValue(this, this.GetType(), "docked"))
-                        screenshotCanvasRect = new Rect(4, 2, (int)Mathf.Min(screenshot_size, ScreenRect.width - 4), (int)Mathf.Min(screenshot_size, ScreenRect.height - 2));
-                    else
-                        screenshotCanvasRect = new Rect(0, 0, (int)Mathf.Min(screenshot_size, ScreenRect.width), (int)Mathf.Min(screenshot_size, ScreenRect.height));
+                    if(m_Docked)
+                    {
+#if UNITY_2019_3_OR_NEWER
+                        m_HorizontalOffset = 1;
+#else
+                        m_HorizontalOffset = 2;
+#endif
+                        m_VerticalOffset = 2;
+                    }
+
+                    screenshotCanvasRect = new Rect(m_HorizontalOffset, m_Docked ? m_VerticalOffset : 0,
+                        (int)Mathf.Min(screenshot_size, ScreenRect.width - m_HorizontalOffset),
+                        (int)Mathf.Min(screenshot_size, ScreenRect.height - m_VerticalOffset));
 
                     screenshotTexturePosition = new Vector2(0, 0);
 
@@ -3417,23 +3356,18 @@ namespace UnityEditor.ProBuilder
                     return;
 
                 case ScreenshotStatus.CanvasReady:
-
                     // take screenshots vertically, then move right, repeat if necessary
                     if (screenshotTexturePosition.y < screenshot_size)
                     {
                         screenshot.ReadPixels(screenshotCanvasRect, (int)screenshotTexturePosition.x, (int)screenshotTexturePosition.y);
-
                         screenshotTexturePosition.y += screenshotCanvasRect.height;
 
                         if (screenshotTexturePosition.y < screenshot_size)
                         {
                             // reposition canvas
-#if RETINA_ENABLED
                             uvGraphOffset.y += screenshotCanvasRect.height / EditorGUIUtility.pixelsPerPoint;
-#else
-                            uvGraphOffset.y += screenshotCanvasRect.height;
-                        #endif
-                            screenshotCanvasRect.height = (int)Mathf.Min(screenshot_size - screenshotTexturePosition.y, ScreenRect.height - 12);
+                            screenshotCanvasRect.height = (int)Mathf.Min(screenshot_size - screenshotTexturePosition.y , ScreenRect.height - m_VerticalOffset);
+
                             screenshotStatus = ScreenshotStatus.PrepareCanvas;
                             Repaint();
                             return;
@@ -3445,21 +3379,16 @@ namespace UnityEditor.ProBuilder
                             if (screenshotTexturePosition.x < screenshot_size)
                             {
                                 // Move right, reset Y
-#if RETINA_ENABLED
                                 uvGraphOffset.x -= screenshotCanvasRect.width / EditorGUIUtility.pixelsPerPoint;
                                 uvGraphOffset.y = (ScreenRect.height / 2f);
-#else
-                                uvGraphOffset.x -= screenshotCanvasRect.width;
-                                uvGraphOffset.y = ScreenRect.height / 2f;
-                            #endif
-                                screenshotCanvasRect.width = (int)Mathf.Min(screenshot_size - screenshotTexturePosition.x, ScreenRect.width);
                                 screenshotTexturePosition.y = 0;
-                                screenshotCanvasRect.height = (int)Mathf.Min(screenshot_size - screenshotTexturePosition.y, ScreenRect.height - 12);
+                                screenshotCanvasRect.width = (int)Mathf.Min(screenshot_size - screenshotTexturePosition.x, ScreenRect.width - m_HorizontalOffset);
+                                screenshotCanvasRect.height = (int)Mathf.Min(screenshot_size, ScreenRect.height - m_VerticalOffset);
                                 screenshotStatus = ScreenshotStatus.PrepareCanvas;
                                 Repaint();
                                 return;
                             }
-                        }
+                         }
                     }
 
                     // reset the canvas to it's original position and scale
