@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [4.4.0] - 2020-07-07
+## [4.5.0] - 2021-01-15
+
+### Bug Fixes
+
+- Fixed the insertion of new points on a Poly Shape being unreliable.
+- Fixed rect selection not working with Universal Render Pipeline.
+- [case: 1281254] Fixed shader warning in URP for UNITY_PASS_FORWARDBASE macro redefinition.
+- [case: 1294866] Fix annotation warning on InitializeOnLoad call.
+- [case: 1304561] Fix `Shape Preview` not rendering with the blue preview tint.
+
+### Changes
+
+- Drop support for Unity 2018.3. This was necessary for optional assembly references.
+
+## [4.4.1] - 2020-11-10
+
+- [case: 1286720] Fixed `Bezier Shape` and `Poly Shape` component preventing build when `Script Stripping` was enabled.
+
+## [4.4.0] - 2020-08-12
 
 ### Features
 
@@ -44,6 +62,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Known Issues
 
 - Prefab Stage does not work properly when `ProBuilderMesh` contains overrides that append geometry.
+- Changelog dates pre-2.4.11-f.0+r4081 are incorrect. These releases were made from SVN, and the history was lost when converting to Git.
 
 ## [4.3.1] - 2020-06-01
 
