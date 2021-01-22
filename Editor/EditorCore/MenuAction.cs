@@ -1,5 +1,6 @@
 // #define GENERATE_DESATURATED_ICONS
 
+using System;
 using UnityEngine;
 using UnityEngine.ProBuilder;
 #if UNITY_2020_2_OR_NEWER
@@ -78,6 +79,8 @@ namespace UnityEditor.ProBuilder
         static readonly Vector2 AltButtonSize = new Vector2(21, 0);
 
         Vector2 m_LastCalculatedSize = Vector2.zero;
+
+        public static Action<MenuAction> onPerformAction;
 
         protected MenuAction()
         {
@@ -225,12 +228,9 @@ namespace UnityEditor.ProBuilder
                 var b1 = ProBuilderEditor.instance != null;
                 var b2 = ProBuilderEditor.selectMode.ContainsFlag(validSelectModes);
                 var b3 = !ProBuilderEditor.selectMode.ContainsFlag(SelectMode.InputTool);
-                var b4 = typeof(VertexManipulationTool).IsAssignableFrom(ToolManager.activeToolType);
-                //Disable the menu action whenever a custom EditorTool is enabled
                 return b1
                        && b2
-                       && b3
-                       && b4;
+                       && b3;
             }
         }
 
@@ -255,10 +255,33 @@ namespace UnityEditor.ProBuilder
         }
 
         /// <summary>
+        /// Perform whatever action this menu item is supposed to do.
+        /// Implementation should be coded in PerformActionImplementation.
+        /// Perform action should be called to trigger the onPerformAction event.
+        /// </summary>
+        /// <returns>A new ActionResult with a summary of the state of the action's success.</returns>
+        public ActionResult PerformAction()
+        {
+            if(onPerformAction != null)
+                onPerformAction(this);
+            return PerformActionImplementation();
+        }
+
+        /// <summary>
+        /// Perform whatever action this menu item is supposed to do. This method should never been call directly
+        /// but though PerformAction.
+        /// </summary>
+        /// <returns>A new ActionResult with a summary of the state of the action's success.</returns>
+        protected abstract ActionResult PerformActionImplementation();
+
+        /// <summary>
         /// Perform whatever action this menu item is supposed to do. You are responsible for implementing Undo.
         /// </summary>
         /// <returns>A new ActionResult with a summary of the state of the action's success.</returns>
-        public abstract ActionResult DoAction();
+        const string obsoleteDoActionMsg = "DoAction() has been replaced by PerformAction(), the implementation of the action should inherits from PerformActionImplementation(). (UnityUpgradable) -> PerformAction()";
+        [Obsolete(obsoleteDoActionMsg, false)]
+        public ActionResult DoAction() => PerformAction();
+
 
         protected virtual void DoAlternateAction()
         {
@@ -309,7 +332,7 @@ namespace UnityEditor.ProBuilder
                     }
                     else
                     {
-                        ActionResult result = DoAction();
+                        ActionResult result = PerformAction();
                         EditorUtility.ShowNotification(result.notification);
                     }
                 }
@@ -342,7 +365,7 @@ namespace UnityEditor.ProBuilder
 
                 if (GUILayout.Button(menuTitle, MenuActionStyles.buttonStyleVertical))
                 {
-                    ActionResult res = DoAction();
+                    ActionResult res = PerformAction();
                     EditorUtility.ShowNotification(res.notification);
                 }
                 MenuActionState altState = optionsMenuState;

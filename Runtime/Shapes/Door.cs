@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine.ProBuilder.MeshOperations;
 
 namespace UnityEngine.ProBuilder.Shapes
 {
@@ -13,15 +15,28 @@ namespace UnityEngine.ProBuilder.Shapes
         [SerializeField]
         float m_LegWidth = .75f;
 
-        public override void RebuildMesh(ProBuilderMesh mesh, Vector3 size)
+        public override void CopyShape(Shape shape)
         {
-            float totalWidth = size.x;
-            float totalHeight = size.y;
-            float depth = size.z;
+            if(shape is Door)
+            {
+                m_DoorHeight = ( (Door) shape ).m_DoorHeight;
+                m_LegWidth = ( (Door) shape ).m_LegWidth;
+            }
+        }
+
+        public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
+        {
+            var upDir = Vector3.Scale(rotation * Vector3.up, size) ;
+            var rightDir = Vector3.Scale(rotation * Vector3.right, size) ;
+            var forwardDir = Vector3.Scale(rotation * Vector3.forward, size) ;
+
+            float totalWidth = rightDir.magnitude;
+            float totalHeight = upDir.magnitude;
+            float depth = forwardDir.magnitude;
 
             float xLegCoord = totalWidth / 2f;
-            var legWidth = xLegCoord - this.m_LegWidth;
-            var ledgeHeight = totalHeight - m_DoorHeight;
+            var legWidth = xLegCoord - m_LegWidth > 0 ? xLegCoord - m_LegWidth : 0.001f;
+            var ledgeHeight = (totalHeight - m_DoorHeight * 2f) > 0 ? totalHeight - m_DoorHeight * 2f : 0.001f;
 
             var baseY = -totalHeight;
             var front = depth / 2f;
@@ -100,7 +115,52 @@ namespace UnityEngine.ProBuilder.Shapes
             points.Add(template[5]);
             points.Add(template[5] - Vector3.forward * depth);
 
+            var sizeSigns = Math.Sign(size);
+            for(int i = 0; i < points.Count; i++)
+                 points[i] = Vector3.Scale(rotation * points[i], sizeSigns);
+
             mesh.GeometryWithPoints(points.ToArray());
+
+            var sizeSign = sizeSigns.x * sizeSigns.y * sizeSigns.z;
+            if(sizeSign < 0)
+            {
+                var faces = mesh.facesInternal;
+                foreach(var face in faces)
+                    face.Reverse();
+            }
+
+            return mesh.mesh.bounds;
+        }
+    }
+
+
+    [CustomPropertyDrawer(typeof(Door))]
+    public class DoorDrawer : PropertyDrawer
+    {
+        static bool s_foldoutEnabled = true;
+
+        const bool k_ToggleOnLabelClick = true;
+
+        static GUIContent m_Content = new GUIContent();
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            EditorGUI.BeginProperty(position, label, property);
+
+            s_foldoutEnabled = EditorGUI.Foldout(position, s_foldoutEnabled, "Door Settings", k_ToggleOnLabelClick);
+
+            EditorGUI.indentLevel++;
+
+            if(s_foldoutEnabled)
+            {
+                m_Content.text = "Pediment Height";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_DoorHeight"), m_Content);
+                m_Content.text = "Side Width";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_LegWidth"), m_Content);
+            }
+
+            EditorGUI.indentLevel--;
+            EditorGUI.EndProperty();
         }
     }
 }

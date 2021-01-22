@@ -85,6 +85,12 @@ namespace UnityEditor.ProBuilder
 
         Color m_CurrentHandleColor = k_HandleColor;
 
+        GUIContent m_IconContent;
+        public override GUIContent toolbarIcon
+        {
+            get { return m_IconContent; }
+        }
+
         //Handles and point placement
         int m_ControlId;
         bool m_PlacingPoint;
@@ -143,6 +149,13 @@ namespace UnityEditor.ProBuilder
 
         void OnEnable()
         {
+            m_IconContent = new GUIContent()
+            {
+                image = IconUtility.GetIcon("Tools/PolyShape/CreatePolyShape"),
+                text = "Create PolyShape",
+                tooltip = "Create PolyShape"
+            };
+
             s_HandleColorUseExistingVertex = Handles.selectedColor;
             s_HandleColorAddVertexOnEdge = Handles.selectedColor;
 
@@ -193,7 +206,7 @@ namespace UnityEditor.ProBuilder
         /// </summary>
         private void UndoRedoPerformed()
         {
-            if(m_CutPath.Count == 0)
+            if(m_CutPath.Count == 0 && m_Mesh != null)
             {
                 m_TargetFace = null;
 

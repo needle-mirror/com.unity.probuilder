@@ -1,3 +1,6 @@
+using UnityEditor;
+using UnityEngine.ProBuilder.MeshOperations;
+
 namespace UnityEngine.ProBuilder.Shapes
 {
     [Shape("Cylinder")]
@@ -15,10 +18,40 @@ namespace UnityEngine.ProBuilder.Shapes
         [SerializeField]
         int m_Smoothing = -1;
 
-        public override void RebuildMesh(ProBuilderMesh mesh, Vector3 size)
+        public override void CopyShape(Shape shape)
         {
-            var radius = Mathf.Max(size.x, size.z) * .5f;
-            var height = size.y;
+            if(shape is Cylinder)
+            {
+                m_AxisDivisions = ((Cylinder)shape).m_AxisDivisions;
+                m_HeightCuts = ((Cylinder)shape).m_HeightCuts;
+                m_Smoothing = ((Cylinder)shape).m_Smoothing;
+            }
+        }
+
+        public override Bounds UpdateBounds(ProBuilderMesh mesh, Vector3 size, Quaternion rotation, Bounds bounds)
+        {
+            var upLocalAxis = rotation * Vector3.up;
+            upLocalAxis = Math.Abs(upLocalAxis);
+
+            bounds = mesh.mesh.bounds;
+            Vector3 boxSize = bounds.size;
+            var maxAxis = Mathf.Max(Mathf.Max(
+                    (1f - upLocalAxis.x)*boxSize.x,
+                    (1f - upLocalAxis.y)*boxSize.y),
+                (1f - upLocalAxis.z)*boxSize.z);
+            boxSize.x = Mathf.Lerp(maxAxis, boxSize.x, upLocalAxis.x);
+            boxSize.y = Mathf.Lerp(maxAxis, boxSize.y, upLocalAxis.y);
+            boxSize.z = Mathf.Lerp(maxAxis, boxSize.z, upLocalAxis.z);
+            bounds.size = boxSize;
+
+            return bounds;
+        }
+
+        public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
+        {
+            var meshSize = Math.Abs(size);
+            var radius = Mathf.Min(meshSize.x, meshSize.z) * .5f;
+            var height = meshSize.y;
 
             if (m_AxisDivisions % 2 != 0)
                 m_AxisDivisions++;
@@ -40,7 +73,7 @@ namespace UnityEngine.ProBuilder.Shapes
             }
 
             // add two because end caps
-            Vector3[] verts = new Vector3[(m_AxisDivisions * (m_HeightCuts + 1) * 4) + (m_AxisDivisions * 6)];
+            Vector3[] vertices = new Vector3[(m_AxisDivisions * (m_HeightCuts + 1) * 4) + (m_AxisDivisions * 6)];
             Face[] faces = new Face[m_AxisDivisions * (m_HeightCuts + 1) + (m_AxisDivisions * 2)];
 
             // build vertex array
@@ -54,18 +87,18 @@ namespace UnityEngine.ProBuilder.Shapes
 
                 for (int n = 0; n < m_AxisDivisions; n++)
                 {
-                    verts[it + 0] = new Vector3(circle[n + 0].x, Y, circle[n + 0].z);
-                    verts[it + 1] = new Vector3(circle[n + 0].x, Y2, circle[n + 0].z);
+                    vertices[it + 0] = new Vector3(circle[n + 0].x, Y, circle[n + 0].z);
+                    vertices[it + 1] = new Vector3(circle[n + 0].x, Y2, circle[n + 0].z);
 
                     if (n != m_AxisDivisions - 1)
                     {
-                        verts[it + 2] = new Vector3(circle[n + 1].x, Y, circle[n + 1].z);
-                        verts[it + 3] = new Vector3(circle[n + 1].x, Y2, circle[n + 1].z);
+                        vertices[it + 2] = new Vector3(circle[n + 1].x, Y, circle[n + 1].z);
+                        vertices[it + 3] = new Vector3(circle[n + 1].x, Y2, circle[n + 1].z);
                     }
                     else
                     {
-                        verts[it + 2] = new Vector3(circle[0].x, Y, circle[0].z);
-                        verts[it + 3] = new Vector3(circle[0].x, Y2, circle[0].z);
+                        vertices[it + 2] = new Vector3(circle[0].x, Y, circle[0].z);
+                        vertices[it + 3] = new Vector3(circle[0].x, Y2, circle[0].z);
                     }
 
                     it += 4;
@@ -103,14 +136,14 @@ namespace UnityEngine.ProBuilder.Shapes
             {
                 // bottom faces
                 var bottomCapHeight = -height * .5f;
-                verts[ind + 0] = new Vector3(circle[n].x, bottomCapHeight, circle[n].z);
+                vertices[ind + 0] = new Vector3(circle[n].x, bottomCapHeight, circle[n].z);
 
-                verts[ind + 1] = new Vector3(0f, bottomCapHeight, 0f);
+                vertices[ind + 1] = new Vector3(0f, bottomCapHeight, 0f);
 
                 if (n != m_AxisDivisions - 1)
-                    verts[ind + 2] = new Vector3(circle[n + 1].x, bottomCapHeight, circle[n + 1].z);
+                    vertices[ind + 2] = new Vector3(circle[n + 1].x, bottomCapHeight, circle[n + 1].z);
                 else
-                    verts[ind + 2] = new Vector3(circle[000].x, bottomCapHeight, circle[000].z);
+                    vertices[ind + 2] = new Vector3(circle[000].x, bottomCapHeight, circle[000].z);
 
                 faces[f_ind + n] = new Face(new int[3] { ind + 2, ind + 1, ind + 0 });
 
@@ -118,19 +151,56 @@ namespace UnityEngine.ProBuilder.Shapes
 
                 // top faces
                 var topCapHeight = height * .5f;
-                verts[ind + 0] = new Vector3(circle[n].x, topCapHeight, circle[n].z);
-                verts[ind + 1] = new Vector3(0f, topCapHeight, 0f);
+                vertices[ind + 0] = new Vector3(circle[n].x, topCapHeight, circle[n].z);
+                vertices[ind + 1] = new Vector3(0f, topCapHeight, 0f);
                 if (n != m_AxisDivisions - 1)
-                    verts[ind + 2] = new Vector3(circle[n + 1].x, topCapHeight, circle[n + 1].z);
+                    vertices[ind + 2] = new Vector3(circle[n + 1].x, topCapHeight, circle[n + 1].z);
                 else
-                    verts[ind + 2] = new Vector3(circle[000].x, topCapHeight, circle[000].z);
+                    vertices[ind + 2] = new Vector3(circle[000].x, topCapHeight, circle[000].z);
 
                 faces[f_ind + (n + m_AxisDivisions)] = new Face(new int[3] { ind + 0, ind + 1, ind + 2 });
 
                 ind += 3;
             }
 
-            mesh.RebuildWithPositionsAndFaces(verts, faces);
+            for(int i = 0; i < vertices.Length; i++)
+                vertices[i] = rotation * vertices[i];
+
+            mesh.RebuildWithPositionsAndFaces(vertices, faces);
+
+            return UpdateBounds(mesh, size, rotation, new Bounds());
+        }
+    }
+
+    [CustomPropertyDrawer(typeof(Cylinder))]
+    public class CylinderDrawer : PropertyDrawer
+    {
+        static bool s_foldoutEnabled = true;
+
+        const bool k_ToggleOnLabelClick = true;
+
+        static GUIContent m_Content = new GUIContent();
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            EditorGUI.BeginProperty(position, label, property);
+
+            s_foldoutEnabled = EditorGUI.Foldout(position, s_foldoutEnabled, "Cylinder Settings", k_ToggleOnLabelClick);
+
+            EditorGUI.indentLevel++;
+
+            if(s_foldoutEnabled)
+            {
+                m_Content.text = "Sides Count";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_AxisDivisions"), m_Content);
+                m_Content.text = "Height Cuts";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_HeightCuts"), m_Content);
+                m_Content.text = "Smoothing Group";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_Smoothing"), m_Content);
+            }
+
+            EditorGUI.indentLevel--;
+            EditorGUI.EndProperty();
         }
     }
 }

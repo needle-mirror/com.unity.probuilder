@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine.ProBuilder.MeshOperations;
 
 namespace UnityEngine.ProBuilder.Shapes
 {
@@ -20,6 +22,17 @@ namespace UnityEngine.ProBuilder.Shapes
         [SerializeField]
         bool m_EndCaps = true;
 
+        public override void CopyShape(Shape shape)
+        {
+            if(shape is Arch)
+            {
+                m_Thickness = ((Arch)shape).m_Thickness;
+                m_NumberOfSides = ((Arch)shape).m_NumberOfSides;
+                m_ArchDegrees = ((Arch)shape).m_ArchDegrees;
+                m_EndCaps = ((Arch)shape).m_EndCaps;
+            }
+        }
+
         Vector3[] GetFace(Vector2 vertex1, Vector2 vertex2, float depth)
         {
             return new Vector3[4]
@@ -31,20 +44,34 @@ namespace UnityEngine.ProBuilder.Shapes
             };
         }
 
-        public override void RebuildMesh(ProBuilderMesh mesh, Vector3 size)
+        public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
         {
+            var upDir = Vector3.Scale(rotation * Vector3.up, size) ;
+            var rightDir = Vector3.Scale(rotation * Vector3.right, size) ;
+            var forwardDir = Vector3.Scale(rotation * Vector3.forward, size) ;
+
+            var xRadius = rightDir.magnitude / 2f;
+            var yRadius = upDir.magnitude;
+            var depth = forwardDir.magnitude / 2f;
+
             var radialCuts = m_NumberOfSides;
             var angle = m_ArchDegrees;
-            var width = m_Thickness;
-            var radius = size.y;
-            var depth = size.z;
-            Vector2[] templateOut = new Vector2[radialCuts];
-            Vector2[] templateIn = new Vector2[radialCuts];
+            var templateOut = new Vector2[radialCuts];
+            var templateIn = new Vector2[radialCuts];
+
+            if(angle < 90f)
+                xRadius *= 2f;
+            else if(angle < 180f)
+                xRadius *= 1f+ Mathf.Lerp(1f, 0f, Mathf.Abs(Mathf.Cos(angle * Mathf.Deg2Rad)));
+            else if(angle > 180f)
+                yRadius /= 1f+ Mathf.Lerp(0f, 1f, (angle - 180f)/90f);
 
             for (int i = 0; i < radialCuts; i++)
             {
-                templateOut[i] = Math.PointInCircumference(radius, i * (angle / (radialCuts - 1)), Vector2.zero) + new Vector2(0, -radius/2f);
-                templateIn[i] = Math.PointInCircumference(radius - width, i * (angle / (radialCuts - 1)), Vector2.zero) + new Vector2(0, -radius/2f);
+                var currentAngle = i * ( angle / ( radialCuts - 1 ) );
+                Vector2 tangent;
+                templateOut[i] = Math.PointInEllipseCircumference(xRadius, yRadius, currentAngle, Vector2.zero, out tangent);
+                templateIn[i] = Math.PointInEllipseCircumference(xRadius - m_Thickness, yRadius - m_Thickness, currentAngle, Vector2.zero, out tangent);
             }
 
             List<Vector3> v = new List<Vector3>();
@@ -82,8 +109,6 @@ namespace UnityEngine.ProBuilder.Shapes
                     if (n == radialCuts - 2)
                         v.AddRange(GetFace(templateIn[n+1], templateOut[n+1], depth));
                 }
-
-
             }
 
             // build front and back faces
@@ -116,7 +141,58 @@ namespace UnityEngine.ProBuilder.Shapes
                 v.AddRange(tpt);
             }
 
+            var sizeSigns = Math.Sign(size);
+            for(int i = 0; i < v.Count; i++)
+                v[i] = Vector3.Scale(rotation * v[i], sizeSigns);
+
             mesh.GeometryWithPoints(v.ToArray());
+
+            var sizeSign = sizeSigns.x * sizeSigns.y * sizeSigns.z;
+            if(sizeSign < 0)
+            {
+                var faces = mesh.facesInternal;
+                foreach(var face in faces)
+                    face.Reverse();
+            }
+
+            mesh.TranslateVerticesInWorldSpace(mesh.mesh.triangles, mesh.transform.TransformDirection(-mesh.mesh.bounds.center));
+            mesh.Refresh();
+
+            return UpdateBounds(mesh, size, rotation, new Bounds());
+        }
+    }
+
+    [CustomPropertyDrawer(typeof(Arch))]
+    public class ArchDrawer : PropertyDrawer
+    {
+        static bool s_foldoutEnabled = true;
+
+        const bool k_ToggleOnLabelClick = true;
+
+        static GUIContent m_Content = new GUIContent();
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            EditorGUI.BeginProperty(position, label, property);
+
+            s_foldoutEnabled = EditorGUI.Foldout(position, s_foldoutEnabled, "Arch Settings", k_ToggleOnLabelClick);
+
+            EditorGUI.indentLevel++;
+
+            if(s_foldoutEnabled)
+            {
+                m_Content.text = "Thickness";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_Thickness"), m_Content);
+                m_Content.text = "Sides Count";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_NumberOfSides"), m_Content);
+                m_Content.text = "Arch Circumference";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_ArchDegrees"), m_Content);
+                m_Content.text = "End Caps";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_EndCaps"), m_Content);
+            }
+
+            EditorGUI.indentLevel--;
+            EditorGUI.EndProperty();
         }
     }
 }

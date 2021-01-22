@@ -15,11 +15,12 @@ namespace UnityEditor.ProBuilder
 
         public static bool SceneViewInUse(Event e)
         {
-            return e.alt
-                || Tools.current == Tool.View
-                || (e.isMouse && e.button > 0)
-                || Tools.viewTool == ViewTool.FPS
-                || Tools.viewTool == ViewTool.Orbit;
+            return GUIUtility.hotControl == 0
+                   &&(e.alt
+                   || Tools.current == Tool.View
+                   || (e.isMouse && e.button > 0)
+                   || Tools.viewTool == ViewTool.FPS
+                   || Tools.viewTool == ViewTool.Orbit);
         }
 
         public static bool IsAppendModifier(EventModifiers em)
@@ -518,6 +519,7 @@ namespace UnityEditor.ProBuilder
         /// Get a plane suitable for mouse input in a scene view.
         /// </summary>
         /// <param name="mousePosition"></param>
+        /// <param name="alignOnGrid"></param>
         /// <returns></returns>
         internal static Plane FindBestPlane(Vector2 mousePosition)
         {
@@ -673,7 +675,7 @@ namespace UnityEditor.ProBuilder
         {
             Plane plane;
             Vector3 normal = Vector3.up;
-            if(EditorSnapSettings.gridSnapEnabled)
+            if(EditorSnapSettings.gridSnapEnabled || SceneView.lastActiveSceneView.showGrid)
             {
                 var sceneView = SceneView.lastActiveSceneView;
                 var cameraTransform = sceneView.camera.transform;

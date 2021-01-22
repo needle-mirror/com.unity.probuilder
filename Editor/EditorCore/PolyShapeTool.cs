@@ -2,8 +2,15 @@
 using UnityEngine;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
+
 using Math = UnityEngine.ProBuilder.Math;
 using UObject = UnityEngine.Object;
+
+#if !UNITY_2020_2_OR_NEWER
+using ToolManager = UnityEditor.EditorTools.EditorTools;
+#else
+using ToolManager = UnityEditor.EditorTools.ToolManager;
+#endif
 
 namespace UnityEditor.ProBuilder
 {
@@ -22,6 +29,12 @@ namespace UnityEditor.ProBuilder
         const float k_HandleSize = .05f;
 
         GUIContent m_OverlayTitle;
+
+        GUIContent m_IconContent;
+        public override GUIContent toolbarIcon
+        {
+            get { return m_IconContent; }
+        }
 
         Plane m_Plane = new Plane(Vector3.up, Vector3.zero);
 
@@ -84,6 +97,16 @@ namespace UnityEditor.ProBuilder
         {
             m_OverlayTitle = new GUIContent("Poly Shape Tool");
 
+            m_IconContent = new GUIContent()
+            {
+                image = IconUtility.GetIcon("Tools/PolyShape/CreatePolyShape"),
+                text = "Create PolyShape",
+                tooltip = "Create PolyShape"
+            };
+
+#if !UNITY_2020_2_OR_NEWER
+            ToolManager.activeToolChanged += OnToolChanged;
+#endif
             ProBuilderEditor.selectModeChanged += OnSelectModeChanged;
             MeshSelection.objectSelectionChanged += OnObjectSelectionChanged;
             Undo.undoRedoPerformed += UndoRedoPerformed;
@@ -91,18 +114,36 @@ namespace UnityEditor.ProBuilder
 
         void OnDisable()
         {
+            SetPolyEditMode(PolyShape.PolyEditMode.None);
+#if !UNITY_2020_2_OR_NEWER
+            ToolManager.activeToolChanged -= OnToolChanged;
+#endif
             ProBuilderEditor.selectModeChanged -= OnSelectModeChanged;
             MeshSelection.objectSelectionChanged -= OnObjectSelectionChanged;
             Undo.undoRedoPerformed -= UndoRedoPerformed;
         }
 
-        public void End()
+#if !UNITY_2020_2_OR_NEWER
+        void End()
+#else
+        public override void OnWillBeDeactivated()
+#endif
         {
             if(polygon != null && polygon.polyEditMode != PolyShape.PolyEditMode.None)
                 SetPolyEditMode(PolyShape.PolyEditMode.None);
-            else
-                DestroyImmediate(this);
+
+            DestroyImmediate(this);
         }
+
+#if !UNITY_2020_2_OR_NEWER
+        void OnToolChanged()
+        {
+            if(!ToolManager.IsActiveTool(this))
+                End();
+            else
+                SetPolyEditMode(PolyShape.PolyEditMode.Edit);
+        }
+#endif
 
         /// <summary>
         /// Main GUI update for the tool, calls every secondary methods to place points, update lines and compute the cut
@@ -206,8 +247,11 @@ namespace UnityEditor.ProBuilder
 
                 case PolyShape.PolyEditMode.Edit:
                 {
-                    if (GUILayout.Button("Quit Editing", UI.EditorGUIUtility.GetActiveStyle("Button")))
+                    if(GUILayout.Button("Quit Editing", UI.EditorGUIUtility.GetActiveStyle("Button")))
+                    {
                         SetPolyEditMode(PolyShape.PolyEditMode.None);
+                        DestroyImmediate(this);
+                    }
                     EditorGUILayout.HelpBox("Move Poly Shape points to update the shape\nPress 'Enter' or 'Space' to Finalize", MessageType.Info);
                     break;
                 }
@@ -256,7 +300,7 @@ namespace UnityEditor.ProBuilder
                 // Entering edit mode after the shape has been finalized once before, which means
                 // possibly reverting manual changes.  Store undo state so that if this was
                 // not intentional user can revert.
-                if (polygon.polyEditMode == PolyShape.PolyEditMode.None && polygon.m_Points.Count > 2)
+                if (old == PolyShape.PolyEditMode.None && polygon.m_Points.Count > 2)
                 {
                     if (ProBuilderEditor.instance != null)
                         ProBuilderEditor.instance.ClearElementSelection();
@@ -282,11 +326,6 @@ namespace UnityEditor.ProBuilder
                 //Dirty the polygon for serialization (fix for transition between prefab and scene mode)
                 if(polygon != null)
                     UnityEditor.EditorUtility.SetDirty(polygon);
-
-                if(mode == PolyShape.PolyEditMode.None)
-                {
-                    DestroyImmediate(this);
-                }
             }
         }
 
@@ -547,7 +586,7 @@ namespace UnityEditor.ProBuilder
                 m_SelectedIndex = -1;
             }
 
-            if(evt.type == EventType.Repaint)
+            if(evt.type == EventType.Repaint && polygon.polyEditMode == PolyShape.PolyEditMode.Path)
             {
                 Vector3 currentPos = polygon.transform.TransformPoint(m_CurrentPosition);
                 Handles.color = k_HandleColor;
@@ -797,6 +836,24 @@ namespace UnityEditor.ProBuilder
             return Mathf.Abs(Mathf.Abs(dot) - 1f) < .01f;
         }
 
+        void OnBeginVertexMovement()
+        {
+            if (!m_IsModifyingVertices)
+                m_IsModifyingVertices = true;
+        }
+
+        void OnFinishVertexMovement()
+        {
+            m_IsModifyingVertices = false;
+            RebuildPolyShapeMesh(polygon);
+        }
+
+        void UndoRedoPerformed()
+        {
+            if (polygon != null && polygon.polyEditMode != PolyShape.PolyEditMode.None)
+                RebuildPolyShapeMesh(polygon);
+        }
+
         void OnSelectModeChanged(SelectMode selectMode)
         {
             // User changed select mode manually, remove InputTool flag
@@ -822,24 +879,6 @@ namespace UnityEditor.ProBuilder
                     SetPolyEditMode(PolyShape.PolyEditMode.None);
                 }
             }
-        }
-
-        void OnBeginVertexMovement()
-        {
-            if (!m_IsModifyingVertices)
-                m_IsModifyingVertices = true;
-        }
-
-        void OnFinishVertexMovement()
-        {
-            m_IsModifyingVertices = false;
-            RebuildPolyShapeMesh(polygon);
-        }
-
-        void UndoRedoPerformed()
-        {
-            if (polygon != null && polygon.polyEditMode != PolyShape.PolyEditMode.None)
-                RebuildPolyShapeMesh(polygon);
         }
     }
 }

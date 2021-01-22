@@ -5,15 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [5.0.0-pre.7] - 2020-11-16
+## [5.0.0-pre.10] - 2021-01-22
 
 ### Internal
 
 - Remove backwards compatibility breaking API changes.
 - Fix `Material.SetInt` deprecation warnings.
 - Fix failing `Undo` tests on macOS.
-
-## [5.0.0-pre.6] - 2020-11-12
 
 ### Features
 
@@ -24,7 +22,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - MergeElements.Merge moved to public API
 
 ### Bug Fixes
-
+- [case: 1300329] Fixing Undo completely reverting all actions.
+- [case: 1299638] Fixed missing dependency on com.unity.modules.physics.
+- [case: 1296104] Fixing freeze transform with negative scales.
+- [case: 1296494] Fixing audio visualizer sample.
+- [case: 1296428] Cleaning Polyshape tool when leaving the EditorTool.
+- [case: 1296427] Removing NullRef Exception on Undo/redo with CutTool.
+- [case: 1296422] Closing MenuToolToggles actions when closing ProBuilder window.
+- [case: 1296520] Fixing `New Poly Shape` menu entry not working
 - [case: 1254339] Correct offset when rendering UVs and correct export when UV Editor is docked.
 - Fixed PolyShape in Prefab mode: PolyShapeMode was not serialized when exiting prefab mode. Update point insertion visualization.
 - [case: 1259845] Fixed dimension overlay being hidden on playmode or reboot of the editor.
@@ -51,6 +56,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [case: 1283167] Fixed `Mesh Collider` mesh value not updating with modifications.
 - [case: 1285651] Fixed tooltip going out of screen when screen display is scale up
 - [case: 1286045] Fixed selection cleaning problem after scene restart.
+- [case: 1266769] Fixed tooltip window not rendering correctly on Linux.
 
 ### Changes
 

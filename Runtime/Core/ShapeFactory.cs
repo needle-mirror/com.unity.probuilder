@@ -2,6 +2,7 @@ using UnityEngine.ProBuilder.MeshOperations;
 using UnityEngine.ProBuilder.Shapes;
 using System;
 using System.Reflection;
+using UnityEditor;
 
 namespace UnityEngine.ProBuilder
 {
@@ -11,7 +12,7 @@ namespace UnityEngine.ProBuilder
     public enum PivotLocation
     {
         Center,
-        FirstVertex
+        FirstCorner
     }
 
     public static class ShapeFactory
@@ -68,14 +69,9 @@ namespace UnityEngine.ProBuilder
                 throw new ArgumentNullException("shape", "Cannot instantiate a null shape.");
 
             var shapeComponent = new GameObject("Shape").AddComponent<ShapeComponent>();
-            shapeComponent.size = Vector3.one;
-            shapeComponent.SetShape(shape);
+            shapeComponent.SetShape(shape, pivotType);
             ProBuilderMesh pb = shapeComponent.mesh;
             pb.renderer.sharedMaterial = BuiltinMaterials.defaultMaterial;
-
-            // Torus shape should implement this itself
-            if (shape.GetType() == typeof(Torus))
-                UVEditing.ProjectFacesBox(pb, pb.facesInternal);
 
             var attribute = Attribute.GetCustomAttribute(shape.GetType(), typeof(ShapeAttribute));
 

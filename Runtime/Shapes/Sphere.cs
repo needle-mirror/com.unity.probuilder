@@ -1,4 +1,6 @@
 ﻿using System;
+using UnityEditor;
+using UnityEngine.ProBuilder.MeshOperations;
 
 namespace UnityEngine.ProBuilder.Shapes
 {
@@ -54,9 +56,29 @@ namespace UnityEngine.ProBuilder.Shapes
         [SerializeField]
         int m_Subdivisions = 3;
 
-        public override void RebuildMesh(ProBuilderMesh mesh, Vector3 size)
+        int m_BottomMostVertexIndex = 0;
+
+        public override void CopyShape(Shape shape)
         {
-            var radius = System.Math.Min(System.Math.Min(size.x, size.y), size.z);
+            if(shape is Sphere)
+            {
+                m_Subdivisions = ( (Sphere) shape ).m_Subdivisions;
+                m_BottomMostVertexIndex = ( (Sphere) shape ).m_BottomMostVertexIndex;
+            }
+        }
+
+        public override Bounds UpdateBounds(ProBuilderMesh mesh, Vector3 size, Quaternion rotation, Bounds bounds)
+        {
+            bounds = mesh.mesh.bounds;
+            Vector3 boxSize = bounds.size;
+            boxSize.x = boxSize.y = boxSize.z = Mathf.Max(boxSize.x, Mathf.Max(boxSize.y, boxSize.z));
+            bounds.size = boxSize;
+            return bounds;
+        }
+
+        public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
+        {
+            var radius = System.Math.Min(System.Math.Min(Mathf.Abs(size.x), Mathf.Abs(size.y)), Mathf.Abs(size.z));
             //avoid to create a degenerated sphere with a radius set to 0
             radius = radius < 0.001f ? 0.001f : radius;
 
@@ -80,7 +102,6 @@ namespace UnityEngine.ProBuilder.Shapes
             Face[] f = new Face[v.Length / 3];
 
             Vector3 bottomMostVertexPosition = Vector3.positiveInfinity;
-            int bottomMostVertexIndex = -1;
 
             for (int i = 0; i < v.Length; i += 3)
             {
@@ -95,7 +116,7 @@ namespace UnityEngine.ProBuilder.Shapes
                     if (v[index].y < bottomMostVertexPosition.y)
                     {
                         bottomMostVertexPosition = v[index];
-                        bottomMostVertexIndex = index;
+                        m_BottomMostVertexIndex = index;
                     }
                 }
             }
@@ -104,10 +125,10 @@ namespace UnityEngine.ProBuilder.Shapes
                 packMargin = 30f
             };
 
-
             mesh.RebuildWithPositionsAndFaces(v, f);
-        }
 
+            return UpdateBounds(mesh, size, rotation, new Bounds());
+        }
 
         // Subdivides a set of vertices (wound as individual triangles) on an icosphere.
         //
@@ -158,5 +179,29 @@ namespace UnityEngine.ProBuilder.Shapes
         }
     }
 
+    [CustomPropertyDrawer(typeof(Sphere))]
+    public class SphereDrawer : PropertyDrawer
+    {
+        static bool s_foldoutEnabled = true;
+
+        const bool k_ToggleOnLabelClick = true;
+
+        readonly GUIContent m_Content = new GUIContent("Subdivisions");
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            EditorGUI.BeginProperty(position, label, property);
+
+            s_foldoutEnabled = EditorGUI.Foldout(position, s_foldoutEnabled, "Sphere Settings", k_ToggleOnLabelClick);
+
+            EditorGUI.indentLevel++;
+
+            if(s_foldoutEnabled)
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_Subdivisions"), m_Content);
+
+            EditorGUI.indentLevel--;
+            EditorGUI.EndProperty();
+        }
+    }
 
 }

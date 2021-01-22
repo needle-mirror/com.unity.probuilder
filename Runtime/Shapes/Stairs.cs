@@ -1,11 +1,29 @@
+using UnityEditor;
+
 namespace UnityEngine.ProBuilder.Shapes
 {
+    public enum StepGenerationType
+    {
+        Height,
+        Count
+    }
+
     [Shape("Stairs")]
     public class Stairs : Shape
     {
-        [Min(1)]
         [SerializeField]
-        int m_Steps = 10;
+        StepGenerationType m_StepGenerationType = StepGenerationType.Count;
+
+        [Min(0.01f)]
+        [SerializeField]
+        float m_StepsHeight = .2f;
+
+        [Range(1, 256)]
+        [SerializeField]
+        int m_StepsCount = 10;
+
+        [SerializeField]
+        bool m_HomogeneousSteps = true;
 
         [Range(0, 360)]
         [SerializeField]
@@ -14,47 +32,107 @@ namespace UnityEngine.ProBuilder.Shapes
         [SerializeField]
         bool m_Sides = true;
 
-        public int steps
-        {
-            get { return m_Steps; }
-            set { m_Steps = value; }
-        }
-
         public bool sides
         {
-            get { return m_Sides; }
-            set { m_Sides = value; }
+            get => m_Sides;
+            set => m_Sides = value;
         }
 
-        public override void RebuildMesh(ProBuilderMesh mesh, Vector3 size)
+        public override void CopyShape(Shape shape)
+        {
+            if(shape is Stairs)
+            {
+                Stairs stairs = (Stairs) shape;
+                m_StepGenerationType = stairs.m_StepGenerationType;
+                m_StepsHeight = stairs.m_StepsHeight;
+                m_StepsCount = stairs.m_StepsCount;
+                m_HomogeneousSteps = stairs.m_HomogeneousSteps;
+                m_Circumference = stairs.m_Circumference;
+                m_Sides = stairs.m_Sides;
+            }
+        }
+
+        public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
         {
             if (m_Circumference > 0)
-                BuildCurvedStairs(mesh, size);
+                return BuildCurvedStairs(mesh, size, rotation);
             else
-                BuildStairs(mesh, size);
+                return BuildStairs(mesh, size, rotation);
         }
 
-        private void BuildStairs(ProBuilderMesh mesh, Vector3 size)
+        public override Bounds UpdateBounds(ProBuilderMesh mesh, Vector3 size, Quaternion rotation, Bounds bounds)
         {
+            if (m_Circumference > 0)
+            {
+                bounds.center = mesh.mesh.bounds.center;
+                bounds.size = Vector3.Scale(Math.Sign(size),mesh.mesh.bounds.size);
+            }
+            else
+            {
+                bounds = mesh.mesh.bounds;
+                bounds.size = size;
+            }
+
+            return bounds;
+        }
+
+        Bounds BuildStairs(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
+        {
+            var upDir = Vector3.Scale(rotation * Vector3.up, size) ;
+            var rightDir = Vector3.Scale(rotation * Vector3.right, size) ;
+            var forwardDir = Vector3.Scale(rotation * Vector3.forward, size) ;
+
+            var meshSize = new Vector3(rightDir.magnitude, upDir.magnitude, forwardDir.magnitude);
+
+            var useStepHeight = m_StepGenerationType == StepGenerationType.Height;
+            var stairsHeight = meshSize.y;
+            var stepsHeight = Mathf.Min(m_StepsHeight, stairsHeight);
+
+            var steps = m_StepsCount;
+            if(useStepHeight)
+            {
+                if(stairsHeight > 0)
+                {
+                    steps = (int) ( stairsHeight / stepsHeight );
+                    if(m_HomogeneousSteps)
+                        stepsHeight = stairsHeight / steps;
+                    else
+                        steps += ( ( stairsHeight / stepsHeight ) - steps ) > 0.001f ? 1 : 0;
+                }
+                else
+                    steps = 1;
+            }
+
+            //Clamping max steps number
+            if(steps > 256)
+            {
+                steps = 256;
+                stepsHeight = stairsHeight / steps;
+            }
+
             // 4 vertices per quad, 2 quads per step.
-            Vector3[] vertices = new Vector3[4 * steps * 2];
-            Face[] faces = new Face[steps * 2];
-            Vector3 extents = size * .5f;
+            var vertices = new Vector3[4 * steps * 2];
+            var faces = new Face[steps * 2];
+            Vector3 extents = meshSize * .5f;
 
             // vertex index, face index
             int v = 0, t = 0;
 
+            float heightInc0, heightInc1, inc0, inc1;
+            float x0, x1, y0, y1, z0, z1;
             for (int i = 0; i < steps; i++)
             {
-                float inc0 = i / (float)steps;
-                float inc1 = (i + 1) / (float)steps;
+                heightInc0 = i * stepsHeight;
+                heightInc1 = i != steps -1 ? (i + 1) * stepsHeight : meshSize.y;
+                inc0 = i / (float)steps;
+                inc1 = (i + 1) / (float)steps;
 
-                float x0 = size.x - extents.x;
-                float x1 = 0 - extents.x;
-                float y0 = size.y * inc0 - extents.y;
-                float y1 = size.y * inc1 - extents.y;
-                float z0 = size.z * inc0 - extents.z;
-                float z1 = size.z * inc1 - extents.z;
+                x0 = meshSize.x - extents.x;
+                x1 = 0 - extents.x;
+                y0 = (useStepHeight ? heightInc0 : meshSize.y * inc0) - extents.y;
+                y1 = (useStepHeight ? heightInc1 : meshSize.y * inc1) - extents.y;
+                z0 = meshSize.z * inc0 - extents.z;
+                z1 = meshSize.z * inc1 - extents.z;
 
                 vertices[v + 0] = new Vector3(x0, y0, z0);
                 vertices[v + 1] = new Vector3(x1, y0, z0);
@@ -100,11 +178,18 @@ namespace UnityEngine.ProBuilder.Shapes
 
                     for (int i = 0; i < steps; i++)
                     {
-                        float y0 = (Mathf.Max(i, 1) / (float)steps) * size.y;
-                        float y1 = ((i + 1) / (float)steps) * size.y;
+                        heightInc0 = Mathf.Max(i, 1) * stepsHeight;
+                        heightInc1 = i != steps-1 ? (i + 1) * stepsHeight : meshSize.y;
+                        inc0 = Mathf.Max(i, 1) / (float)steps;
+                        inc1 = (i + 1) / (float)steps;
 
-                        float z0 = (i / (float)steps) * size.z;
-                        float z1 = ((i + 1) / (float)steps) * size.z;
+                        y0 = useStepHeight ? heightInc0 : inc0 * meshSize.y;
+                        y1 = useStepHeight ? heightInc1 : inc1 * meshSize.y;
+
+                        inc0 = i / (float)steps;
+
+                        z0 = inc0 * meshSize.z;
+                        z1 = inc1 * meshSize.z;
 
                         sides_v[sv + 0] = new Vector3(x, 0f, z0) - extents;
                         sides_v[sv + 1] = new Vector3(x, 0f, z1) - extents;
@@ -141,47 +226,73 @@ namespace UnityEngine.ProBuilder.Shapes
                     vertices = vertices.Concat(sides_v);
                     faces = faces.Concat(sides_f);
 
-                    x += size.x;
+                    x += meshSize.x;
                 }
 
                 // add that last back face
                 vertices = vertices.Concat(new Vector3[] {
-                    new Vector3(0f, 0f, size.z) - extents,
-                    new Vector3(size.x, 0f, size.z) - extents,
-                    new Vector3(0f, size.y, size.z) - extents,
-                    new Vector3(size.x, size.y, size.z) - extents
+                    new Vector3(0f, 0f, meshSize.z) - extents,
+                    new Vector3(meshSize.x, 0f, meshSize.z) - extents,
+                    new Vector3(0f, meshSize.y, meshSize.z) - extents,
+                    new Vector3(meshSize.x, meshSize.y, meshSize.z) - extents
                 });
 
                 faces = faces.Add(new Face(new int[] { v + 0, v + 1, v + 2, v + 1, v + 3, v + 2 }));
             }
 
-            // if(m_Forward.x < 0)
-            // {
-            //     for(int i = 0; i < vertices.Length; i++)
-            //         vertices[i] = new Vector3(-vertices[i].x, vertices[i].y, -vertices[i].z);
-            // }
-            // else if(m_Forward.z < 0)
-            // {
-            //     for(int i = 0; i < vertices.Length; i++)
-            //         vertices[i] = new Vector3(vertices[i].z, vertices[i].y, -vertices[i].x);
-            // }
-            // else if(m_Forward.z > 0)
-            // {
-                for(int i = 0; i < vertices.Length; i++)
-                    vertices[i] = new Vector3(-vertices[i].z, vertices[i].y, vertices[i].x);
-            //}
+            var sizeSigns = Math.Sign(size);
+            for(int i = 0; i < vertices.Length; i++)
+            {
+                vertices[i] = rotation * vertices[i];
+                vertices[i].Scale(sizeSigns);
+            }
+
+            var sizeSign = sizeSigns.x * sizeSigns.y * sizeSigns.z;
+            if(sizeSign < 0)
+            {
+                foreach(var face in faces)
+                    face.Reverse();
+            }
 
             mesh.RebuildWithPositionsAndFaces(vertices, faces);
+
+            return UpdateBounds(mesh, size, rotation, new Bounds());
         }
 
-        private void BuildCurvedStairs(ProBuilderMesh mesh, Vector3 size)
+        Bounds BuildCurvedStairs(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
         {
+            var meshSize = Math.Abs(size);
+
             var buildSides = m_Sides;
-            var innerRadius = size.z;
-            var stairWidth = size.x;
-            var height = size.y;
+            var innerRadius = meshSize.z;
+            var stairWidth = meshSize.x;
+            var height = Mathf.Abs(meshSize.y);
             var circumference = m_Circumference;
             bool noInnerSide = innerRadius < Mathf.Epsilon;
+            bool useStepHeight = m_StepGenerationType == StepGenerationType.Height;
+
+            var stepsHeight = Mathf.Min(m_StepsHeight, height);
+            var steps = m_StepsCount;
+            if(useStepHeight && stepsHeight > 0.01f * m_StepsHeight)
+            {
+                if(height > 0)
+                {
+                    steps = (int) ( height / m_StepsHeight );
+                    if(m_HomogeneousSteps && steps > 0)
+                        stepsHeight = height / steps;
+                    else
+                        steps += ( ( height / m_StepsHeight ) - steps ) > 0.001f ? 1 : 0;
+                }
+                else
+                    steps = 1;
+            }
+
+            //Clamping max steps number
+            if(steps > 256)
+            {
+                steps = 256;
+                stepsHeight = height / steps;
+            }
 
             // 4 vertices per quad, vertical step first, then floor step can be 3 or 4 verts depending on
             // if the inner radius is 0 or not.
@@ -199,8 +310,8 @@ namespace UnityEngine.ProBuilder.Shapes
                 float inc0 = (i / (float)steps) * cir;
                 float inc1 = ((i + 1) / (float)steps) * cir;
 
-                float h0 = ((i / (float)steps) * height);
-                float h1 = (((i + 1) / (float)steps) * height);
+                float h0 = useStepHeight ? i * stepsHeight : ((i / (float)steps) * height);
+                float h1 = useStepHeight ? ((i != steps-1) ? ((i+1) * stepsHeight) : height) :( ((i + 1) / (float)steps) * height );
 
                 Vector3 v0 = new Vector3(-Mathf.Cos(inc0), 0f, Mathf.Sin(inc0));
                 Vector3 v1 = new Vector3(-Mathf.Cos(inc1), 0f, Mathf.Sin(inc1));
@@ -299,8 +410,8 @@ namespace UnityEngine.ProBuilder.Shapes
                         float inc0 = (i / (float)steps) * cir;
                         float inc1 = ((i + 1) / (float)steps) * cir;
 
-                        float h0 = ((Mathf.Max(i, 1) / (float)steps) * height);
-                        float h1 = (((i + 1) / (float)steps) * height);
+                        float h0 = useStepHeight ? Mathf.Max(i, 1) * stepsHeight : ((Mathf.Max(i, 1) / (float)steps) * height);
+                        float h1 = useStepHeight ? (i != steps-1 ? (i + 1) * stepsHeight : meshSize.y) : (((i + 1) / (float)steps) * height);
 
                         Vector3 v0 = new Vector3(-Mathf.Cos(inc0), 0f, Mathf.Sin(inc0)) * x;
                         Vector3 v1 = new Vector3(-Mathf.Cos(inc1), 0f, Mathf.Sin(inc1)) * x;
@@ -378,23 +489,78 @@ namespace UnityEngine.ProBuilder.Shapes
                     f.Reverse();
             }
 
-            // if(m_Forward.x < 0)
-            // {
-            //     for(int i = 0; i < positions.Length; i++)
-            //         positions[i] = new Vector3(-positions[i].x, positions[i].y, -positions[i].z);
-            // }
-            // else if(m_Forward.z < 0)
-            // {
-            //     for(int i = 0; i < positions.Length; i++)
-            //         positions[i] = new Vector3(positions[i].z, positions[i].y, -positions[i].x);
-            // }
-            // else if(m_Forward.z > 0)
-            // {
-                for(int i = 0; i < positions.Length; i++)
-                    positions[i] = new Vector3(-positions[i].z, positions[i].y, positions[i].x);
-            // }
+            var sizeSigns = Math.Sign(size);
+            for(int i = 0; i < positions.Length; i++)
+            {
+                positions[i] = rotation * positions[i];
+                positions[i].Scale(sizeSigns);
+            }
+
+            var sizeSign = sizeSigns.x * sizeSigns.y * sizeSigns.z;
+            if(sizeSign < 0)
+            {
+                foreach(var face in faces)
+                    face.Reverse();
+            }
 
             mesh.RebuildWithPositionsAndFaces(positions, faces);
+
+            mesh.TranslateVerticesInWorldSpace(mesh.mesh.triangles, mesh.transform.TransformDirection(-mesh.mesh.bounds.center));
+            mesh.Refresh();
+
+            return UpdateBounds(mesh, size, rotation, new Bounds());
+        }
+    }
+
+    [CustomPropertyDrawer(typeof(Stairs))]
+    public class StairsDrawer : PropertyDrawer
+    {
+        static bool s_foldoutEnabled = true;
+
+        const bool k_ToggleOnLabelClick = true;
+
+        static readonly GUIContent k_StepGenerationContent = new GUIContent("Steps Generation", L10n.Tr("Should the stairs generation use a step number or step height."));
+        static readonly GUIContent k_StepsCountContent = new GUIContent("Steps Count", L10n.Tr("Number of steps in the stair."));
+        static readonly GUIContent k_StepsHeightContent = new GUIContent("Steps Height", L10n.Tr("Height of each step of the generated stairs."));
+        static readonly GUIContent k_HomogeneousStepsContent = new GUIContent("Homogeneous Steps", L10n.Tr("Should step height be rounded to generate homogeneous stairs."));
+        static readonly GUIContent k_CircumferenceContent = new GUIContent("Circumference", L10n.Tr("Circumference of the stairs, negate to rotate in opposite direction"));
+        static readonly GUIContent k_SidesContent = new GUIContent("Sides", L10n.Tr("Does sides need to be generated as well."));
+
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            EditorGUI.BeginProperty(position, label, property);
+
+            s_foldoutEnabled = EditorGUI.Foldout(position, s_foldoutEnabled, "Stairs Settings", k_ToggleOnLabelClick);
+
+            EditorGUI.indentLevel++;
+
+            if(s_foldoutEnabled)
+            {
+                var typeProperty = property.FindPropertyRelative("m_StepGenerationType");
+                StepGenerationType typeEnum = (StepGenerationType)(typeProperty.intValue);
+                EditorGUI.BeginChangeCheck();
+                typeEnum = (StepGenerationType)EditorGUILayout.EnumPopup(k_StepGenerationContent, typeEnum);
+                if(EditorGUI.EndChangeCheck())
+                    typeProperty.enumValueIndex = (int)typeEnum;
+
+                if(typeEnum == StepGenerationType.Count)
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_StepsCount"),
+                        k_StepsCountContent);
+                else
+                {
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_StepsHeight"),
+                        k_StepsHeightContent);
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_HomogeneousSteps"),
+                        k_HomogeneousStepsContent);
+                }
+
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_Circumference"), k_CircumferenceContent);
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_Sides"), k_SidesContent);
+            }
+
+            EditorGUI.indentLevel--;
+            EditorGUI.EndProperty();
         }
     }
 }

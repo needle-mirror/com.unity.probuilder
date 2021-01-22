@@ -1,3 +1,6 @@
+using UnityEditor;
+using UnityEngine.ProBuilder.MeshOperations;
+
 namespace UnityEngine.ProBuilder.Shapes
 {
     [Shape("Cube")]
@@ -28,16 +31,28 @@ namespace UnityEngine.ProBuilder.Shapes
             0, 1, 4, 5, 1, 2, 5, 6, 2, 3, 6, 7, 3, 0, 7, 4, 4, 5, 7, 6, 3, 2, 0, 1
         };
 
-        public override void RebuildMesh(ProBuilderMesh mesh, Vector3 size)
+        public override void CopyShape(Shape shape) {}
+
+        public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
         {
             mesh.Clear();
 
             Vector3[] points = new Vector3[k_CubeTriangles.Length];
 
             for (int i = 0; i < k_CubeTriangles.Length; i++)
-                points[i] = Vector3.Scale(k_CubeVertices[k_CubeTriangles[i]], size);
+                points[i] = rotation * Vector3.Scale(k_CubeVertices[k_CubeTriangles[i]], Math.Abs(size));
 
             mesh.GeometryWithPoints(points);
+
+            return mesh.mesh.bounds;
+        }
+    }
+
+    [CustomPropertyDrawer(typeof(Cube))]
+    public class CubeDrawer : PropertyDrawer
+    {
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
         }
     }
 }

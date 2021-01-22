@@ -1,4 +1,7 @@
-﻿namespace UnityEngine.ProBuilder.Shapes
+﻿using UnityEditor;
+using UnityEngine.ProBuilder.MeshOperations;
+
+namespace UnityEngine.ProBuilder.Shapes
 {
     [Shape("Plane")]
     public class Plane : Shape
@@ -11,7 +14,16 @@
         [SerializeField]
         int m_WidthSegments = 1;
 
-        public override void RebuildMesh(ProBuilderMesh mesh, Vector3 size)
+        public override void CopyShape(Shape shape)
+        {
+            if(shape is Plane)
+            {
+                m_HeightSegments = ((Plane)shape).m_HeightSegments;
+                m_WidthSegments = ((Plane)shape).m_WidthSegments;
+            }
+        }
+
+        public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
         {
             int w = m_WidthSegments + 1;
             int h = m_HeightSegments + 1;
@@ -42,10 +54,42 @@
                 }
             }
 
-            for (i = 0; i < v.Length; i++)
+            for(i = 0; i < v.Length; i++)
                 v[i] = new Vector3(p[i].y, 0f, p[i].x);
 
             mesh.GeometryWithPoints(v);
+
+            return mesh.mesh.bounds;
+        }
+    }
+
+    [CustomPropertyDrawer(typeof(Plane))]
+    public class PlaneDrawer : PropertyDrawer
+    {
+        static bool s_foldoutEnabled = true;
+
+        const bool k_ToggleOnLabelClick = true;
+
+        static GUIContent m_Content = new GUIContent();
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            EditorGUI.BeginProperty(position, label, property);
+
+            s_foldoutEnabled = EditorGUI.Foldout(position, s_foldoutEnabled, "Plane Settings", k_ToggleOnLabelClick);
+
+            EditorGUI.indentLevel++;
+
+            if(s_foldoutEnabled)
+            {
+                m_Content.text = "Height Segments";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_HeightSegments"), m_Content);
+                m_Content.text = "Width Segments";
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_WidthSegments"), m_Content);
+            }
+
+            EditorGUI.indentLevel--;
+            EditorGUI.EndProperty();
         }
     }
 }

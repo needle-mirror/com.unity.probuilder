@@ -2,7 +2,6 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System;
-using UnityEngine.ProBuilder.Shapes;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -63,10 +62,14 @@ namespace UnityEngine.ProBuilder
             //Ensure no element is selected at awake
             ClearSelection();
 
-            if (vertexCount > 0
-                && faceCount > 0
-                && meshSyncState == MeshSyncState.Null)
+            if(vertexCount > 0
+               && faceCount > 0
+               && meshSyncState == MeshSyncState.Null)
+            {
+                var version = m_VersionID;
                 Rebuild();
+                m_VersionID = version;
+            }
         }
 
         void Reset()
@@ -245,19 +248,6 @@ namespace UnityEngine.ProBuilder
         }
 
         /// <summary>
-        /// Rebuilds the mesh with different vertices positions but same faces
-        /// </summary>
-        /// <param name="points">New vertices positions</param>
-        internal void ReplaceVertices(Vector3[] points)
-        {
-            positions = points;
-            m_SharedVertices = SharedVertex.GetSharedVerticesWithPositions(points);
-            InvalidateSharedVertexLookup();
-            ToMesh();
-            Refresh();
-        }
-
-        /// <summary>
         /// Clear all mesh attributes and reinitialize with new positions and face collections.
         /// </summary>
         /// <param name="vertices">Vertex positions array.</param>
@@ -340,6 +330,8 @@ namespace UnityEngine.ProBuilder
             mesh.name = string.Format("pb_Mesh{0}", id);
 
             EnsureMeshFilterIsAssigned();
+
+            m_VersionID++;
         }
 
         /// <summary>
@@ -409,6 +401,8 @@ namespace UnityEngine.ProBuilder
 
             if ((mask & RefreshMask.Bounds) > 0 && mesh != null)
                 mesh.RecalculateBounds();
+
+            m_VersionID++;
         }
 
         internal void EnsureMeshColliderIsAssigned()
@@ -418,6 +412,7 @@ namespace UnityEngine.ProBuilder
 #if ENABLE_DRIVEN_PROPERTIES
                 SerializationUtility.RegisterDrivenProperty(this, collider, "m_Mesh");
 #endif
+
                 collider.sharedMesh = mesh;
             }
         }

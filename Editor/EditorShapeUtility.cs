@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.Shapes;
+using Math = UnityEngine.ProBuilder.Math;
 
 namespace UnityEditor.ProBuilder
 {
@@ -37,6 +39,50 @@ namespace UnityEditor.ProBuilder
             }
         }
 
+        static int s_MaxContentPerGroup = 6;
+
+        public static int MaxContentPerGroup
+        {
+            get => s_MaxContentPerGroup;
+        }
+
+        static List<GUIContent[]> s_ShapeTypesGUILists;
+
+        public static List<GUIContent[]> shapeTypesGUI
+        {
+            get
+            {
+                if(s_ShapeTypesGUILists == null)
+                {
+                    s_ShapeTypesGUILists = new List<GUIContent[]>();
+                    string[] shapeTypeNames = availableShapeTypes.Select(x => ((ShapeAttribute)System.Attribute.GetCustomAttribute(x, typeof(ShapeAttribute))).name).ToArray();
+                    GUIContent[] shapeTypesGUI = null;
+
+                    int i;
+                    for(i = 0; i < shapeTypeNames.Length; i++)
+                    {
+                        if(i % s_MaxContentPerGroup == 0)
+                        {
+                            if(shapeTypesGUI != null) s_ShapeTypesGUILists.Add(shapeTypesGUI);
+                            int maxLength = Mathf.Min(s_MaxContentPerGroup, ( shapeTypeNames.Length - i ));
+                            shapeTypesGUI = new GUIContent[maxLength];
+                        }
+                        var name = shapeTypeNames[i];
+                        var texture = IconUtility.GetIcon("Tools/ShapeTool/" + name);
+                        if(texture != null)
+                            shapeTypesGUI[i % s_MaxContentPerGroup] = new GUIContent(texture, name);
+                        else
+                            shapeTypesGUI[i % s_MaxContentPerGroup] = new GUIContent(name, name);
+                    }
+
+                    if(shapeTypesGUI != null) s_ShapeTypesGUILists.Add(shapeTypesGUI);
+
+                }
+                return s_ShapeTypesGUILists;
+            }
+        }
+
+
         static EditorShapeUtility()
         {
             var types = TypeCache.GetTypesDerivedFrom<Shape>();
@@ -47,6 +93,8 @@ namespace UnityEditor.ProBuilder
                 {
                     var name = "ShapeBuilder." + type.Name;
                     var pref = ProBuilderSettings.Get(name, SettingsScope.Project, (Shape)Activator.CreateInstance(type));
+                    if(pref == null)
+                        pref = (Shape) Activator.CreateInstance(type);
                     s_Prefs.Add(name, pref);
                 }
             }
@@ -57,33 +105,38 @@ namespace UnityEditor.ProBuilder
             var name = "ShapeBuilder." + shape.GetType().Name;
             if (s_Prefs.TryGetValue(name, out var data))
             {
-                data = shape;
+                data.CopyShape(shape);
                 s_Prefs[name] = data;
                 ProBuilderSettings.Set(name, data);
             }
         }
 
-        public static Shape GetLastParams(Type type)
+        public static void CopyLastParams(Shape shape, Type type)
         {
             if (!typeof(Shape).IsAssignableFrom(type))
             {
                 throw new ArgumentException(nameof(type));
             }
+
+            if(shape == null)
+            {
+                try
+                {
+                    shape = Activator.CreateInstance(type) as Shape;
+                }
+                catch
+                {
+                    Debug.LogError(
+                        $"Cannot create shape of type {type.ToString()} because it doesn't have a default constructor.");
+                }
+            }
+
             var name = "ShapeBuilder." + type.Name;
             if (s_Prefs.TryGetValue(name, out var data))
             {
                 if (data != null)
-                    return (Shape)data;
+                    shape.CopyShape(data);
             }
-            try
-            {
-                return Activator.CreateInstance(type) as Shape;
-            }
-            catch
-            {
-                Debug.LogError($"Cannot create shape of type { type.ToString() } because it doesn't have a default constructor.");
-            }
-            return default;
         }
 
         public static Shape CreateShape(Type type)
@@ -97,7 +150,12 @@ namespace UnityEditor.ProBuilder
             {
                 Debug.LogError($"Cannot create shape of type { type.ToString() } because it doesn't have a default constructor.");
             }
-            shape = GetLastParams(shape.GetType());
+
+            if(shape == null)
+                return null;
+
+            CopyLastParams(shape, type);
+
             return shape;
         }
 
@@ -105,7 +163,8 @@ namespace UnityEditor.ProBuilder
         {
             public Vector3 CenterPosition;
             public Vector3 Normal;
-            public EdgeData[] Edges;
+            public Vector3[] Points;
+            public bool IsValid = true;
 
             public bool IsVisible
             {
@@ -115,9 +174,9 @@ namespace UnityEditor.ProBuilder
 
                     Vector3 cameraDir;
                     if (Camera.current.orthographic)
-                        cameraDir = -Camera.current.transform.forward;
+                        cameraDir = Camera.current.transform.forward;
                     else
-                        cameraDir = (Camera.current.transform.position - Handles.matrix.MultiplyPoint(CenterPosition)).normalized;
+                        cameraDir = (Handles.matrix.MultiplyPoint(CenterPosition) - Camera.current.transform.position).normalized;
 
                     return Vector3.Dot(cameraDir, worldDir) < 0;
                 }
@@ -125,7 +184,7 @@ namespace UnityEditor.ProBuilder
 
             public FaceData()
             {
-                Edges = new EdgeData[4];
+                Points = new Vector3[4];
             }
 
             public void SetData(Vector3 centerPosition, Vector3 normal)
@@ -135,198 +194,145 @@ namespace UnityEditor.ProBuilder
             }
         }
 
-        public struct EdgeData
-        {
-            public Vector3 PointA;
-            public Vector3 PointB;
-
-            public Vector3 Center
-            {
-                get => ( (PointA + PointB) / 2.0f );
-            }
-
-            public EdgeData(Vector3 pointA, Vector3 pointB)
-            {
-                PointA = pointA;
-                PointB = pointB;
-            }
-        }
-
-        //Comparer for the edgesToDraw hashset
-        public class EdgeDataComparer : IEqualityComparer<EdgeData>
-        {
-            public bool Equals(EdgeData edge1, EdgeData edge2)
-            {
-                bool result = edge1.PointA == edge2.PointA && edge1.PointB == edge2.PointB;
-                result |= edge1.PointA == edge2.PointB && edge1.PointB == edge2.PointA;
-                return result;
-            }
-
-            //Don't wan't to compare hashcode, only using equals
-            public int GetHashCode(EdgeData edge) {return 0;}
-        }
-
-        public class BoundsState
-        {
-            public Matrix4x4 positionAndRotationMatrix;
-            public Bounds boundsHandleValue;
-        }
-
-        public static void CopyColliderPropertiesToHandle(Transform transform, Bounds bounds, BoxBoundsHandle targetBoxBoundsHandle, bool isEditing, BoundsState activeBoundsState)
-        {
-            // when editing a shape, we don't bother doing the conversion from handle space bounds to model for the
-            // active handle
-            if (isEditing)
-            {
-                targetBoxBoundsHandle.center = activeBoundsState.boundsHandleValue.center;
-                targetBoxBoundsHandle.size = activeBoundsState.boundsHandleValue.size;
-                return;
-            }
-
-            var localToWorld = transform.localToWorldMatrix;
-            var lossyScale = transform.lossyScale;
-
-            targetBoxBoundsHandle.center = Handles.inverseMatrix * (localToWorld * bounds.center);
-            targetBoxBoundsHandle.size = Vector3.Scale(bounds.size, lossyScale);
-        }
-
-        public static void CopyHandlePropertiesToCollider(BoxBoundsHandle boxBoundsHandle, BoundsState activeBoundsState)
-        {
-            Vector3 snappedHandleSize =
-                ProBuilderSnapping.Snap(boxBoundsHandle.size, EditorSnapping.activeMoveSnapValue);
-            //Find the scaling direction
-            Vector3 centerDiffSign =
-                ( boxBoundsHandle.center - activeBoundsState.boundsHandleValue.center ).normalized;
-            Vector3 sizeDiffSign = ( boxBoundsHandle.size - activeBoundsState.boundsHandleValue.size ).normalized;
-            Vector3 globalSign = Vector3.Scale(centerDiffSign, sizeDiffSign);
-            //Set the center to the right position
-            Vector3 center = activeBoundsState.boundsHandleValue.center +
-                             Vector3.Scale(( snappedHandleSize - activeBoundsState.boundsHandleValue.size ) / 2f,
-                                 globalSign);
-            //Set new Bounding box value
-            activeBoundsState.boundsHandleValue = new Bounds(center, snappedHandleSize);
-        }
-
-        public static void UpdateFaces(Bounds bounds, Vector3 center, FaceData[] faces,
-            Dictionary<EdgeData, SimpleTuple<EdgeData, EdgeData>> edgeToNeighborsEdges)
+        public static void UpdateFaces(Bounds bounds, Vector3 scale, FaceData[] faces)
         {
             if(faces.Length != 6)
                 faces = new FaceData[6];
 
             Vector3 extents = bounds.extents;
 
-            EdgeData edgeX1 = new EdgeData(new Vector3(extents.x, extents.y, extents.z),
-                                new Vector3(-extents.x, extents.y, extents.z));
-            EdgeData edgeX2 = new EdgeData(new Vector3(extents.x, -extents.y, extents.z),
-                                new Vector3(-extents.x, -extents.y, extents.z));
-            EdgeData edgeX3 = new EdgeData(new Vector3(extents.x, extents.y, -extents.z),
-                                new Vector3(-extents.x, extents.y, -extents.z));
-            EdgeData edgeX4 = new EdgeData(new Vector3(extents.x, -extents.y, -extents.z),
-                                new Vector3(-extents.x, -extents.y, -extents.z));
+            Vector3 pointX0Y0Z0 = Vector3.Scale(new Vector3(-extents.x, -extents.y, -extents.z), scale);
+            Vector3 pointX1Y0Z0 = Vector3.Scale(new Vector3(extents.x, -extents.y, -extents.z), scale);
+            Vector3 pointX0Y1Z0 = Vector3.Scale(new Vector3(-extents.x, extents.y, -extents.z), scale);
+            Vector3 pointX0Y0Z1 = Vector3.Scale(new Vector3(-extents.x, -extents.y, extents.z), scale);
+            Vector3 pointX1Y1Z0 = Vector3.Scale(new Vector3(extents.x, extents.y, -extents.z), scale);
+            Vector3 pointX1Y0Z1 = Vector3.Scale(new Vector3(extents.x, -extents.y, extents.z), scale);
+            Vector3 pointX0Y1Z1 = Vector3.Scale(new Vector3(-extents.x, extents.y, extents.z), scale);
+            Vector3 pointX1Y1Z1 = Vector3.Scale(new Vector3(extents.x, extents.y, extents.z), scale);
 
-            EdgeData edgeY1 = new EdgeData(new Vector3(extents.x, extents.y, extents.z),
-                                new Vector3(extents.x, -extents.y, extents.z) );
-            EdgeData edgeY2 = new EdgeData(new Vector3(-extents.x, extents.y, extents.z),
-                                new Vector3(-extents.x, -extents.y, extents.z));
-            EdgeData edgeY3 = new EdgeData(new Vector3(extents.x, extents.y, -extents.z),
-                                new Vector3(extents.x, -extents.y, -extents.z));
-            EdgeData edgeY4 = new EdgeData(new Vector3(-extents.x, extents.y, -extents.z),
-                                new Vector3(-extents.x, -extents.y, -extents.z));
-
-            EdgeData edgeZ1 = new EdgeData(new Vector3(extents.x, extents.y, extents.z),
-                                new Vector3(extents.x, extents.y, -extents.z));
-            EdgeData edgeZ2 = new EdgeData(new Vector3(-extents.x, extents.y, extents.z),
-                                new Vector3(-extents.x, extents.y, -extents.z));
-            EdgeData edgeZ3 = new EdgeData(new Vector3(extents.x, -extents.y, extents.z),
-                                new Vector3(extents.x, -extents.y, -extents.z));
-            EdgeData edgeZ4 = new EdgeData(new Vector3(-extents.x, -extents.y, extents.z),
-                                new Vector3(-extents.x, -extents.y, -extents.z));
-
-            // -X
-            var pos =  - new Vector3(extents.x, 0, 0);
-            faces[0].SetData(pos, Vector3.right);
-            faces[0].Edges[0] = edgeY2;
-            faces[0].Edges[1] = edgeZ2;
-            faces[0].Edges[2] = edgeZ4;
-            faces[0].Edges[3] = edgeY4;
-
-            // +X
-            pos = new Vector3(extents.x, 0, 0);
-            faces[1].SetData(pos, -Vector3.right);
-            faces[1].Edges[0] = edgeY1;
-            faces[1].Edges[1] = edgeZ1;
-            faces[1].Edges[2] = edgeZ3;
-            faces[1].Edges[3] = edgeY3;
-
-            // -Y
-            pos = - new Vector3(0, extents.y, 0);
-            faces[2].SetData(pos, Vector3.up);
-            faces[2].Edges[0] = edgeX2;
-            faces[2].Edges[1] = edgeZ3;
-            faces[2].Edges[2] = edgeZ4;
-            faces[2].Edges[3] = edgeX4;
-
-            // +Y
-            pos = new Vector3(0, extents.y, 0);
-            faces[3].SetData(pos, -Vector3.up);
-            faces[3].Edges[0] = edgeX1;
-            faces[3].Edges[1] = edgeZ1;
-            faces[3].Edges[2] = edgeZ2;
-            faces[3].Edges[3] = edgeX3;
-
-            // -Z
-            pos = - new Vector3(0, 0, extents.z);
-            faces[4].SetData(pos, Vector3.forward);
-            faces[4].Edges[0] = edgeX3;
-            faces[4].Edges[1] = edgeY3;
-            faces[4].Edges[2] = edgeY4;
-            faces[4].Edges[3] = edgeX4;
-
-            // +Z
-            pos = new Vector3(0, 0, extents.z);
-            faces[5].SetData(pos, -Vector3.forward);
-            faces[5].Edges[0] = edgeX1;
-            faces[5].Edges[1] = edgeY1;
-            faces[5].Edges[2] = edgeY2;
-            faces[5].Edges[3] = edgeX2;
-
-            if(edgeToNeighborsEdges == null)
-                return;
-
-            if(edgeToNeighborsEdges.Count ==0)
+            var signs = Math.Sign(bounds.size);
+            var pos = Vector3.zero;
+            if(Mathf.Abs(extents.x) > Mathf.Epsilon)
             {
-                edgeToNeighborsEdges.Add(edgeX1, new SimpleTuple<EdgeData, EdgeData>(edgeX2, edgeX3));
-                edgeToNeighborsEdges.Add(edgeX2, new SimpleTuple<EdgeData, EdgeData>(edgeX4, edgeX1));
-                edgeToNeighborsEdges.Add(edgeX3, new SimpleTuple<EdgeData, EdgeData>(edgeX1, edgeX4));
-                edgeToNeighborsEdges.Add(edgeX4, new SimpleTuple<EdgeData, EdgeData>(edgeX3, edgeX2));
+                // -X
+                pos = -new Vector3(extents.x * scale.x, 0, 0);
+                faces[0].SetData(pos, -( scale.x * signs.x * Vector3.right ).normalized);
+                faces[0].Points[0] = pointX0Y1Z1;
+                faces[0].Points[1] = pointX0Y0Z1;
+                faces[0].Points[2] = pointX0Y0Z0;
+                faces[0].Points[3] = pointX0Y1Z0;
+                faces[0].IsValid = true;
 
-                edgeToNeighborsEdges.Add(edgeY1, new SimpleTuple<EdgeData, EdgeData>(edgeY3, edgeY2));
-                edgeToNeighborsEdges.Add(edgeY2, new SimpleTuple<EdgeData, EdgeData>(edgeY1, edgeY4));
-                edgeToNeighborsEdges.Add(edgeY3, new SimpleTuple<EdgeData, EdgeData>(edgeY4, edgeY1));
-                edgeToNeighborsEdges.Add(edgeY4, new SimpleTuple<EdgeData, EdgeData>(edgeY2, edgeY3));
-
-                edgeToNeighborsEdges.Add(edgeZ1, new SimpleTuple<EdgeData, EdgeData>(edgeZ2, edgeZ3));
-                edgeToNeighborsEdges.Add(edgeZ2, new SimpleTuple<EdgeData, EdgeData>(edgeZ4, edgeZ1));
-                edgeToNeighborsEdges.Add(edgeZ3, new SimpleTuple<EdgeData, EdgeData>(edgeZ1, edgeZ4));
-                edgeToNeighborsEdges.Add(edgeZ4, new SimpleTuple<EdgeData, EdgeData>(edgeZ3, edgeZ2));
+                // +X
+                pos = new Vector3(extents.x * scale.x, 0, 0);
+                faces[1].SetData(pos, ( scale.x * signs.x * Vector3.right ).normalized);
+                faces[1].Points[0] = pointX1Y1Z1;
+                faces[1].Points[1] = pointX1Y0Z1;
+                faces[1].Points[2] = pointX1Y0Z0;
+                faces[1].Points[3] = pointX1Y1Z0;
+                faces[1].IsValid = true;
             }
             else
             {
-                edgeToNeighborsEdges[edgeX1]= new SimpleTuple<EdgeData, EdgeData>(edgeX2, edgeX3);
-                edgeToNeighborsEdges[edgeX2]= new SimpleTuple<EdgeData, EdgeData>(edgeX4, edgeX1);
-                edgeToNeighborsEdges[edgeX3]= new SimpleTuple<EdgeData, EdgeData>(edgeX1, edgeX4);
-                edgeToNeighborsEdges[edgeX4]= new SimpleTuple<EdgeData, EdgeData>(edgeX3, edgeX2);
-
-                edgeToNeighborsEdges[edgeY1]= new SimpleTuple<EdgeData, EdgeData>(edgeY3, edgeY2);
-                edgeToNeighborsEdges[edgeY2]= new SimpleTuple<EdgeData, EdgeData>(edgeY1, edgeY4);
-                edgeToNeighborsEdges[edgeY3]= new SimpleTuple<EdgeData, EdgeData>(edgeY4, edgeY1);
-                edgeToNeighborsEdges[edgeY4]= new SimpleTuple<EdgeData, EdgeData>(edgeY2, edgeY3);
-
-                edgeToNeighborsEdges[edgeZ1]= new SimpleTuple<EdgeData, EdgeData>(edgeZ2, edgeZ3);
-                edgeToNeighborsEdges[edgeZ2]= new SimpleTuple<EdgeData, EdgeData>(edgeZ4, edgeZ1);
-                edgeToNeighborsEdges[edgeZ3]= new SimpleTuple<EdgeData, EdgeData>(edgeZ1, edgeZ4);
-                edgeToNeighborsEdges[edgeZ4]= new SimpleTuple<EdgeData, EdgeData>(edgeZ3, edgeZ2);
+                faces[0].IsValid = false;
+                faces[1].IsValid = false;
             }
+
+            if(Mathf.Abs(extents.y) > Mathf.Epsilon)
+            {
+                // -Y
+                pos = -new Vector3(0, extents.y * scale.y, 0);
+                faces[2].SetData(pos, -( scale.y * signs.y * Vector3.up ).normalized);
+                faces[2].Points[0] = pointX1Y0Z1;
+                faces[2].Points[1] = pointX0Y0Z1;
+                faces[2].Points[2] = pointX0Y0Z0;
+                faces[2].Points[3] = pointX1Y0Z0;
+                faces[2].IsValid = true;
+
+                // +Y
+                pos = new Vector3(0, extents.y * scale.y, 0);
+                faces[3].SetData(pos, ( scale.y * signs.y * Vector3.up ).normalized);
+                faces[3].Points[0] = pointX1Y1Z1;
+                faces[3].Points[1] = pointX0Y1Z1;
+                faces[3].Points[2] = pointX0Y1Z0;
+                faces[3].Points[3] = pointX1Y1Z0;
+                faces[3].IsValid = true;
+            }
+            else
+            {
+                faces[2].IsValid = false;
+                faces[3].IsValid = false;
+            }
+
+            if(Mathf.Abs(extents.z) > Mathf.Epsilon)
+            {
+                // -Z
+                pos = -new Vector3(0, 0, extents.z * scale.z);
+                faces[4].SetData(pos, -(scale.z * signs.z * Vector3.forward).normalized);
+                faces[4].Points[0] = pointX1Y1Z0;
+                faces[4].Points[1] = pointX1Y0Z0;
+                faces[4].Points[2] = pointX0Y0Z0;
+                faces[4].Points[3] = pointX0Y1Z0;
+                faces[4].IsValid = true;
+
+                // +Z
+                pos = new Vector3(0, 0, extents.z * scale.z);
+                faces[5].SetData(pos, (scale.z * signs.z * Vector3.forward).normalized);
+                faces[5].Points[0] = pointX1Y1Z1;
+                faces[5].Points[1] = pointX1Y0Z1;
+                faces[5].Points[2] = pointX0Y0Z1;
+                faces[5].Points[3] = pointX0Y1Z1;
+                faces[5].IsValid = true;
+            }
+            else
+            {
+                faces[4].IsValid = false;
+                faces[5].IsValid = false;
+            }
+        }
+
+        internal static bool PointerIsInFace(FaceData face)
+        {
+            if(!face.IsVisible)
+                return false;
+
+            Vector2[] face2D = new Vector2[4];
+            for(int i = 0; i < face.Points.Length; i++)
+            {
+                face2D[i] = HandleUtility.WorldToGUIPoint(face.Points[i]);
+            }
+            return PointInQuad2D(Event.current.mousePosition, face2D);
+        }
+
+        static bool PointInQuad2D(Vector2 point, Vector2[] quadPoints)
+        {
+            bool inQuad = true;
+
+            Vector2[] points = { point, quadPoints[2], quadPoints[3] };
+            inQuad &= SameSide(quadPoints[0], quadPoints[1], points);
+            points[1] =  quadPoints[0]; // { point, quadPoints[0], quadPoints[3]};
+            inQuad &= SameSide(quadPoints[1], quadPoints[2], points);
+            points[2] =  quadPoints[1]; // { point, quadPoints[0], quadPoints[1]};
+            inQuad &= SameSide(quadPoints[2], quadPoints[3], points);
+            points[1] =  quadPoints[2]; // { point, quadPoints[2], quadPoints[1]};
+            inQuad &= SameSide(quadPoints[3], quadPoints[0], points);
+
+            return inQuad;
+        }
+
+        static bool SameSide(Vector2 pStart, Vector2 pEnd, Vector2[] points)
+        {
+            if(points.Length < 2)
+                return true;
+
+            var cpRef = Vector3.Cross(pEnd - pStart, points[0] - pStart);
+            for(int i = 1; i < points.Length; i++)
+            {
+                var cp = Vector3.Cross(pEnd - pStart, points[i] - pStart);
+                if(Vector3.Dot(cpRef, cp) < 0)
+                    return false;
+            }
+            return true;
         }
 
     }

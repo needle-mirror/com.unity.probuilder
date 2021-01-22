@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.ProBuilder;
+using UnityEngine.ProBuilder.MeshOperations;
 using UnityEngine.ProBuilder.Shapes;
 using UnityEngine.UIElements;
-
+using Plane = UnityEngine.ProBuilder.Shapes.Plane;
+using Sprite = UnityEngine.ProBuilder.Shapes.Sprite;
 #if UNITY_2020_2_OR_NEWER
 using ToolManager = UnityEditor.EditorTools.ToolManager;
 #else
@@ -19,9 +22,20 @@ namespace UnityEditor.ProBuilder
         IMGUIContainer m_ShapeField;
 
         SerializedProperty m_ShapeProperty;
-        SerializedProperty m_ShapePropertiesProperty;
+        SerializedProperty m_ShapePivotProperty;
+        SerializedProperty m_ShapeSizeXProperty;
+        SerializedProperty m_ShapeSizeYProperty;
+        SerializedProperty m_ShapeSizeZProperty;
 
         int m_ActiveShapeIndex = 0;
+
+        static bool s_foldoutEnabled = true;
+
+        public GUIContent m_ShapePropertyLabel = new GUIContent("Shape Properties");
+        readonly GUIContent k_ShapePivotLabel = new GUIContent("Pivot");
+        readonly GUIContent k_ShapeSizeXLabel = new GUIContent("X (Length)");
+        readonly GUIContent k_ShapeSizeYLabel = new GUIContent("Y (Height)");
+        readonly GUIContent k_ShapeSizeZLabel = new GUIContent("Z (Width)");
 
         const string k_dialogTitle = "Shape reset";
         const string k_dialogText = "The current shape has been edited, you will loose all modifications.";
@@ -48,18 +62,10 @@ namespace UnityEditor.ProBuilder
         void OnEnable()
         {
             m_ShapeProperty = serializedObject.FindProperty("m_Shape");
-            m_ShapePropertiesProperty = serializedObject.FindProperty("m_Properties");
-
-            Undo.undoRedoPerformed += UndoRedoPerformedOnShapeEditor;
-        }
-
-        void UndoRedoPerformedOnShapeEditor()
-        {
-            // the `==` comparison is necessary because `is` does not handle native object lifetime. this is apparent
-            // when performing an undo / redo in tests and the editor tracker invokes callbacks with null native objects.
-            foreach(var component in targets)
-                if(component is ShapeComponent shape && shape != null)
-                    shape.Rebuild();
+            m_ShapePivotProperty = serializedObject.FindProperty("m_PivotLocation");
+            m_ShapeSizeXProperty = serializedObject.FindProperty("m_Size.x");
+            m_ShapeSizeYProperty = serializedObject.FindProperty("m_Size.y");
+            m_ShapeSizeZProperty = serializedObject.FindProperty("m_Size.z");
         }
 
         public override void OnInspectorGUI()
@@ -75,34 +81,9 @@ namespace UnityEditor.ProBuilder
 
             serializedObject.Update();
 
-            EditorGUI.BeginChangeCheck();
-
-            m_ActiveShapeIndex = HasMultipleShapeTypes ? -1 : Mathf.Max(-1, Array.IndexOf(EditorShapeUtility.availableShapeTypes, m_CurrentShapeType));
-
-            m_ActiveShapeIndex = EditorGUILayout.Popup(m_ActiveShapeIndex, EditorShapeUtility.shapeTypes);
-
-            if(EditorGUI.EndChangeCheck())
-            {
-                var type = EditorShapeUtility.availableShapeTypes[m_ActiveShapeIndex];
-                foreach(var comp in targets)
-                {
-                    ShapeComponent shapeComponent = ( (ShapeComponent) comp );
-                    Shape shape = shapeComponent.shape;
-                    if(shape.GetType() != type)
-                    {
-                        if(tool != null)
-                            DrawShapeTool.s_ActiveShapeIndex.value = m_ActiveShapeIndex;
-                        UndoUtility.RegisterCompleteObjectUndo(shapeComponent, "Change Shape");
-                        shapeComponent.SetShape(EditorShapeUtility.CreateShape(type));
-                        ProBuilderEditor.Refresh();
-                    }
-                }
-            }
-
-            //bool edited = false;
             int editedShapesCount = 0;
             foreach(var comp in targets)
-                editedShapesCount += ( (ShapeComponent) comp ).edited ? 1 : 0;
+                editedShapesCount += ( (ShapeComponent) comp ).isEditable ? 0 : 1;
 
             if(editedShapesCount > 0)
             {
@@ -117,11 +98,9 @@ namespace UnityEditor.ProBuilder
                     foreach(var comp in targets)
                     {
                         var shapeComponent = comp as ShapeComponent;
-                        if( shapeComponent.edited )
-                        {
-                            shapeComponent.edited = false;
-                            shapeComponent.Rebuild();
-                        }
+                        UndoUtility.RecordComponents<Transform, ProBuilderMesh, ShapeComponent>(shapeComponent.GetComponents(typeof(Component)),"Reset Shape");
+                        shapeComponent.UpdateComponent();
+                        ProBuilderEditor.Refresh();
                     }
                 }
 
@@ -140,12 +119,52 @@ namespace UnityEditor.ProBuilder
 
             serializedObject.Update ();
 
-            foreach(var comp in targets)
-            {
-                ((ShapeComponent)comp).UpdateProperties();
-            }
+            var foldoutEnabled = tool == null ? s_foldoutEnabled : DrawShapeTool.s_SettingsEnabled.value;
+            foldoutEnabled = EditorGUILayout.Foldout(foldoutEnabled, m_ShapePropertyLabel, true);
 
-            EditorGUILayout.PropertyField(m_ShapePropertiesProperty, new GUIContent("Editing Box Properties"), true);
+            if(tool == null)
+                s_foldoutEnabled = foldoutEnabled;
+            else
+                DrawShapeTool.s_SettingsEnabled.value = foldoutEnabled;
+
+            if(foldoutEnabled)
+            {
+                EditorGUI.indentLevel++;
+
+                EditorGUI.BeginChangeCheck();
+                m_ActiveShapeIndex = HasMultipleShapeTypes
+                    ? -1
+                    : Mathf.Max(-1, Array.IndexOf(EditorShapeUtility.availableShapeTypes, m_CurrentShapeType));
+                m_ActiveShapeIndex = EditorGUILayout.Popup(m_ActiveShapeIndex, EditorShapeUtility.shapeTypes);
+
+                if(EditorGUI.EndChangeCheck())
+                {
+                    var type = EditorShapeUtility.availableShapeTypes[m_ActiveShapeIndex];
+                    foreach(var comp in targets)
+                    {
+                        ShapeComponent shapeComponent = ( (ShapeComponent) comp );
+                        Shape shape = shapeComponent.shape;
+                        if(shape.GetType() != type)
+                        {
+                            if(tool != null)
+                                DrawShapeTool.s_ActiveShapeIndex.value = m_ActiveShapeIndex;
+                            UndoUtility.RecordComponents<Transform, ProBuilderMesh, ShapeComponent>(shapeComponent.GetComponents(typeof(Component)),"Change Shape");
+                            shapeComponent.SetShape(EditorShapeUtility.CreateShape(type), shapeComponent.pivotLocation);
+                            ProBuilderEditor.Refresh();
+                        }
+                    }
+                }
+
+                if(tool)
+                    EditorGUILayout.PropertyField(m_ShapePivotProperty, k_ShapePivotLabel);
+
+                EditorGUILayout.PropertyField(m_ShapeSizeXProperty, k_ShapeSizeXLabel);
+                if(HasMultipleShapeTypes || (m_CurrentShapeType != typeof(Plane) &&  m_CurrentShapeType != typeof(Sprite)))
+                    EditorGUILayout.PropertyField(m_ShapeSizeYProperty, k_ShapeSizeYLabel);
+                EditorGUILayout.PropertyField(m_ShapeSizeZProperty, k_ShapeSizeZLabel);
+
+                EditorGUI.indentLevel--;
+            }
 
             if(!HasMultipleShapeTypes)
                 EditorGUILayout.PropertyField(m_ShapeProperty, new GUIContent("Shape Properties"), true);
@@ -155,12 +174,15 @@ namespace UnityEditor.ProBuilder
                 foreach(var comp in targets)
                 {
                     var shapeComponent = comp as ShapeComponent;
-                    if(!shapeComponent.edited)
+                    if(shapeComponent.isEditable)
                     {
+                        UndoUtility.RecordComponents<Transform, ProBuilderMesh, ShapeComponent>(shapeComponent.GetComponents(typeof(Component)),"Resize Shape");
                         shapeComponent.UpdateComponent();
                         if(tool != null)
+                        {
                             tool.SetBounds(shapeComponent.size);
-                        EditorShapeUtility.SaveParams(shapeComponent.shape);
+                            DrawShapeTool.SaveShapeParams(shapeComponent);
+                        }
                         ProBuilderEditor.Refresh();
                     }
                 }
