@@ -5,23 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [5.0.0-pre.10] - 2021-01-22
+## [5.0.1] - 2021-03-09
 
-### Internal
+### Bug Fixes
 
-- Remove backwards compatibility breaking API changes.
-- Fix `Material.SetInt` deprecation warnings.
-- Fix failing `Undo` tests on macOS.
+- Disable unstable test on Linux.
+
+## [5.0.0] - 2021-03-08
 
 ### Features
 
-- Added Point-to-point Cut tool
-- Upgrading PolyShape tool to EditorTool and correct some features in it.
-- Added a selection preview when using the Select Path tool.
+- Redesigned shape creation workflow. Shapes are now interactively drawn in the Scene View, and remain configurable after the point of creation via the `ShapeComponent` Inspector. Default shapes can still be created through the `GameObject/ProBuilder` menu.
+- Added `Point to Point Cut` tool.
+- Added a selection preview when using the `Select Path` tool.
 - Added `Selection X Ray` option to highlight occluded element selections with a muted color. Default shortcut is `Alt + Shift + X` (modifiable in Shortcut Manager).
-- MergeElements.Merge moved to public API
+- Added Analytics for Actions and Menu Shortcuts
 
 ### Bug Fixes
+
+- [case: 1304442] Update package description for SRPs : warning to users to add samples projects.
 - [case: 1300329] Fixing Undo completely reverting all actions.
 - [case: 1299638] Fixed missing dependency on com.unity.modules.physics.
 - [case: 1296104] Fixing freeze transform with negative scales.
@@ -55,17 +57,34 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [case: 1284741] Fixed missing tooltips for some items in the `Smooth Group Editor` window.
 - [case: 1283167] Fixed `Mesh Collider` mesh value not updating with modifications.
 - [case: 1285651] Fixed tooltip going out of screen when screen display is scale up
+- [case: 1285654] Fixed selected faces highlight for isometric camera mode in sceneview.
 - [case: 1286045] Fixed selection cleaning problem after scene restart.
 - [case: 1266769] Fixed tooltip window not rendering correctly on Linux.
+- [case: 1281658] Fixed warning when modifying a PBMesh with particule effect using PBMesh as shape emitter.
+- [case: 1317148] Fixed edge selection returning incorrect results with some Unity versions.
+- [case: 1312537] Fixed script stripping on disabled objects when building.
+- [case: 1311258] Fixed material reverting when subdividing edge.
+- [case: 1317773] Fixed undo after shape creation.
 
 ### Changes
 
-- Modified VertexManipulationTool to inherit from EditorTool
-- Adding a new MenuAction in Samples to merge faces from edges selection
-- Removing preprocessor directives for Unity 2018 and below for Probuilder 5.0
+- Modified `VertexManipulationTool` to inherit from EditorTool.
+- Adding a new MenuAction in Samples to merge faces from edges selection.
+- Removing preprocessor directives for Unity 2018 and below for Probuilder 5.0.
 - Modified the AppendVerticesToEdge to handle edges split for non-convex faces.
 - Removed unused "About" images.
 - Removed unused HDRP shader variants.
+- `MergeElements.Merge` moved to public API.
+- Upgraded `PolyShape` tool to EditorTool and correct some features in it.
+- Updated documentation for ProBuilder 5.0.0.
+- Add `GameObject/ProBuilder` menu to create primitives with default dimensions.
+- Added `com.unity.modules.physics` and `com.unity.modules.imgui` modules as dependencies.
+
+### Internal
+
+- Remove backwards compatibility breaking API changes.
+- Fix `Material.SetInt` deprecation warnings.
+- Fix failing `Undo` tests on macOS.
 
 ## [4.4.0] - 2020-08-12
 

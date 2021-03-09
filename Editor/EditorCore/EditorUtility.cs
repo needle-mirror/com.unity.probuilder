@@ -3,7 +3,7 @@
 using UnityEngine;
 using System.Linq;
 using System;
-using UnityEditor.Experimental.SceneManagement;
+
 using UnityEngine.ProBuilder;
 using UnityEngine.Rendering;
 using UObject = UnityEngine.Object;
@@ -12,6 +12,12 @@ using UnityEditorInternal;
 using UnityEngine.SceneManagement;
 #if !UNITY_2019_1_OR_NEWER
 using System.Reflection;
+#endif
+
+#if UNITY_2021_2_OR_NEWER
+using PrefabStageUtility = UnityEditor.SceneManagement.PrefabStageUtility;
+#else
+using PrefabStageUtility = UnityEditor.Experimental.SceneManagement.PrefabStageUtility;
 #endif
 
 namespace UnityEditor.ProBuilder
@@ -318,7 +324,7 @@ namespace UnityEditor.ProBuilder
                     // This little dance is required to prevent the Prefab system from detecting an overridden property
                     // before ProBuilderMesh.RefreshCollisions has a chance to mark the MeshCollider.sharedMesh property
                     // as driven. "AddComponent<MeshCollider>" constructs the MeshCollider and simultaneously assigns
-                    // the "m_Mesh" property, marking the property dirty. So we undo that change, here then assign the
+                    // the "m_Mesh" property, marking the property dirty. So we undo that change here, then assign the
                     // mesh through our own method.
                     collider.sharedMesh = null;
                     collider.convex = s_MeshColliderIsConvex;

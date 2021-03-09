@@ -1,5 +1,4 @@
 ﻿using UnityEditor;
-using UnityEngine.ProBuilder.MeshOperations;
 
 namespace UnityEngine.ProBuilder.Shapes
 {
@@ -63,6 +62,7 @@ namespace UnityEngine.ProBuilder.Shapes
         }
     }
 
+#if UNITY_EDITOR
     [CustomPropertyDrawer(typeof(Plane))]
     public class PlaneDrawer : PropertyDrawer
     {
@@ -70,7 +70,8 @@ namespace UnityEngine.ProBuilder.Shapes
 
         const bool k_ToggleOnLabelClick = true;
 
-        static GUIContent m_Content = new GUIContent();
+        static readonly GUIContent k_HeightCutsContent = new GUIContent("Height Cuts", L10n.Tr("Number of divisions in the plane height."));
+        static readonly GUIContent k_WidthCutsContent = new GUIContent("Width Cuts", L10n.Tr("Number of divisions in the plane width."));
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -82,15 +83,14 @@ namespace UnityEngine.ProBuilder.Shapes
 
             if(s_foldoutEnabled)
             {
-                m_Content.text = "Height Segments";
-                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_HeightSegments"), m_Content);
-                m_Content.text = "Width Segments";
-                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_WidthSegments"), m_Content);
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_HeightSegments"), k_HeightCutsContent);
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("m_WidthSegments"), k_WidthCutsContent);
             }
 
             EditorGUI.indentLevel--;
             EditorGUI.EndProperty();
         }
     }
+#endif
 }
 

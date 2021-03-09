@@ -10,31 +10,35 @@ namespace UnityEditor.ProBuilder
         protected override void EndState()
         {
             tool.RebuildShape();
-            tool.m_LastShapeCreated = tool.m_ShapeComponent;
-            tool.m_ShapeComponent = null;
+            tool.m_LastShapeCreated = tool.m_ProBuilderShape;
+            tool.m_ProBuilderShape = null;
         }
 
         ShapeState ValidateShape()
         {
             tool.RebuildShape();
-            tool.m_ShapeComponent.SetPivotPosition(tool.m_BB_Origin);
-            DrawShapeTool.s_ActiveShapeIndex.value = Array.IndexOf(EditorShapeUtility.availableShapeTypes,tool.m_ShapeComponent.shape.GetType());
+            tool.m_ProBuilderShape.pivotGlobalPosition = tool.m_BB_Origin;
+            tool.m_ProBuilderShape.gameObject.hideFlags = HideFlags.None;
 
-            DrawShapeTool.SaveShapeParams(tool.m_ShapeComponent);
+            DrawShapeTool.s_ActiveShapeIndex.value = Array.IndexOf(EditorShapeUtility.availableShapeTypes,tool.m_ProBuilderShape.shape.GetType());
+            DrawShapeTool.SaveShapeParams(tool.m_ProBuilderShape);
+
+            // make sure that the whole shape creation process is a single undo group
+            var group = Undo.GetCurrentGroup() - 1;
+            Selection.activeObject = tool.m_ProBuilderShape.gameObject;
+            Undo.CollapseUndoOperations(group);
 
             return NextState();
         }
 
         public override ShapeState DoState(Event evt)
         {
-            if((tool.m_ShapeComponent.shape is Plane)
-                || (tool.m_ShapeComponent.shape is UnityEngine.ProBuilder.Shapes.Sprite))
+            if((tool.m_ProBuilderShape.shape is Plane)
+                || (tool.m_ProBuilderShape.shape is UnityEngine.ProBuilder.Shapes.Sprite))
             {
                 //Skip Height definition for plane
-                return NextState();
+                return ValidateShape();
             }
-
-            tool.DrawBoundingBox();
 
             if(evt.type == EventType.KeyDown)
             {
@@ -44,8 +48,13 @@ namespace UnityEditor.ProBuilder
                     case KeyCode.Return:
                     case KeyCode.Escape:
                         return ValidateShape();
+
+                    case KeyCode.Delete:
+                        return ResetState();
                 }
             }
+
+            tool.DrawBoundingBox();
 
             if(evt.isMouse)
             {

@@ -2,7 +2,7 @@ using UnityEditor;
 
 namespace UnityEngine.ProBuilder.Shapes
 {
-    public enum StepGenerationType
+    enum StepGenerationType
     {
         Height,
         Count
@@ -25,7 +25,7 @@ namespace UnityEngine.ProBuilder.Shapes
         [SerializeField]
         bool m_HomogeneousSteps = true;
 
-        [Range(0, 360)]
+        [Range(-360, 360)]
         [SerializeField]
         float m_Circumference = 0f;
 
@@ -54,7 +54,7 @@ namespace UnityEngine.ProBuilder.Shapes
 
         public override Bounds RebuildMesh(ProBuilderMesh mesh, Vector3 size, Quaternion rotation)
         {
-            if (m_Circumference > 0)
+            if (Mathf.Abs(m_Circumference) > 0)
                 return BuildCurvedStairs(mesh, size, rotation);
             else
                 return BuildStairs(mesh, size, rotation);
@@ -62,7 +62,7 @@ namespace UnityEngine.ProBuilder.Shapes
 
         public override Bounds UpdateBounds(ProBuilderMesh mesh, Vector3 size, Quaternion rotation, Bounds bounds)
         {
-            if (m_Circumference > 0)
+            if (Mathf.Abs(m_Circumference) > 0)
             {
                 bounds.center = mesh.mesh.bounds.center;
                 bounds.size = Vector3.Scale(Math.Sign(size),mesh.mesh.bounds.size);
@@ -316,7 +316,7 @@ namespace UnityEngine.ProBuilder.Shapes
                 Vector3 v0 = new Vector3(-Mathf.Cos(inc0), 0f, Mathf.Sin(inc0));
                 Vector3 v1 = new Vector3(-Mathf.Cos(inc1), 0f, Mathf.Sin(inc1));
 
-                /**
+                /*
                  *
                  *      /6-----/7
                  *     /      /
@@ -512,6 +512,7 @@ namespace UnityEngine.ProBuilder.Shapes
         }
     }
 
+#if UNITY_EDITOR
     [CustomPropertyDrawer(typeof(Stairs))]
     public class StairsDrawer : PropertyDrawer
     {
@@ -519,13 +520,12 @@ namespace UnityEngine.ProBuilder.Shapes
 
         const bool k_ToggleOnLabelClick = true;
 
-        static readonly GUIContent k_StepGenerationContent = new GUIContent("Steps Generation", L10n.Tr("Should the stairs generation use a step number or step height."));
-        static readonly GUIContent k_StepsCountContent = new GUIContent("Steps Count", L10n.Tr("Number of steps in the stair."));
+        static readonly GUIContent k_StepGenerationContent = new GUIContent("Steps Generation", L10n.Tr("Whether to generate steps using the number of steps or by step height."));
+        static readonly GUIContent k_StepsCountContent = new GUIContent("Steps Count", L10n.Tr("Number of steps of the stair."));
         static readonly GUIContent k_StepsHeightContent = new GUIContent("Steps Height", L10n.Tr("Height of each step of the generated stairs."));
-        static readonly GUIContent k_HomogeneousStepsContent = new GUIContent("Homogeneous Steps", L10n.Tr("Should step height be rounded to generate homogeneous stairs."));
-        static readonly GUIContent k_CircumferenceContent = new GUIContent("Circumference", L10n.Tr("Circumference of the stairs, negate to rotate in opposite direction"));
-        static readonly GUIContent k_SidesContent = new GUIContent("Sides", L10n.Tr("Does sides need to be generated as well."));
-
+        static readonly GUIContent k_HomogeneousStepsContent = new GUIContent("Homogeneous Steps", L10n.Tr("Whether to round the step height to create homogenous steps."));
+        static readonly GUIContent k_CircumferenceContent = new GUIContent("Circumference", L10n.Tr("Circumference of the stairs. Use a negative number to rotate in the opposite direction."));
+        static readonly GUIContent k_SidesContent = new GUIContent("Sides", L10n.Tr("Whether to generate sides."));
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -542,17 +542,14 @@ namespace UnityEngine.ProBuilder.Shapes
                 EditorGUI.BeginChangeCheck();
                 typeEnum = (StepGenerationType)EditorGUILayout.EnumPopup(k_StepGenerationContent, typeEnum);
                 if(EditorGUI.EndChangeCheck())
-                    typeProperty.enumValueIndex = (int)typeEnum;
+                    typeProperty.intValue = (int)typeEnum;
 
                 if(typeEnum == StepGenerationType.Count)
-                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_StepsCount"),
-                        k_StepsCountContent);
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_StepsCount"), k_StepsCountContent);
                 else
                 {
-                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_StepsHeight"),
-                        k_StepsHeightContent);
-                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_HomogeneousSteps"),
-                        k_HomogeneousStepsContent);
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_StepsHeight"), k_StepsHeightContent);
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("m_HomogeneousSteps"), k_HomogeneousStepsContent);
                 }
 
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("m_Circumference"), k_CircumferenceContent);
@@ -563,4 +560,5 @@ namespace UnityEngine.ProBuilder.Shapes
             EditorGUI.EndProperty();
         }
     }
+#endif
 }

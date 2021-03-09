@@ -43,7 +43,7 @@ namespace UnityEditor.ProBuilder
             }
 
             if(tool.m_LastShapeCreated != null)
-                EditShapeTool.DoEditingGUI(tool.m_LastShapeCreated, true);
+                EditShapeTool.DoEditingHandles(tool.m_LastShapeCreated, true);
 
             if(evt.isMouse && HandleUtility.nearestControl == tool.controlID)
             {
@@ -98,10 +98,10 @@ namespace UnityEditor.ProBuilder
                 }
             }
 
-            if(GUIUtility.hotControl == 0 && evt.shift)
+            if(GUIUtility.hotControl == 0 && evt.shift && !(evt.control || evt.command))
                 tool.DuplicatePreview(m_HitPosition);
             else if(tool.m_DuplicateGO != null)
-                GameObject.DestroyImmediate(tool.m_DuplicateGO);
+                Object.DestroyImmediate(tool.m_DuplicateGO);
 
             // Repaint to visualize the placement preview dot
             if (evt.type == EventType.MouseMove && HandleUtility.nearestControl == tool.controlID)
@@ -118,7 +118,7 @@ namespace UnityEditor.ProBuilder
                     }
                 }
 
-                if(evt.shift)
+                if(GUIUtility.hotControl == 0 && evt.shift && !(evt.control || evt.command))
                     tool.DrawBoundingBox(false);
             }
 
