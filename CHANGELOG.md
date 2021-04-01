@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.0.3] - 2021-04-01
+
+### Bug Fixes
+
+- [case: 1324399] Fixing errors when building with prefabs in scene.
+- [case: 1323666] Preventing to assign an empty mesh as MeshCollider.
+- [case: 1322032] Fixing wrong ProBuilderMesh colors on domain reload when null.
+- [case: 1322150] Fixing torus and sphere UV generation when creating New Shape.
+- [case: 1320936] Fixing 'ProBuilderize' action creating empty submeshes.
+
+### Changes
+
+- Property `Experimental Feature` can now be reset with the rest of ProBuilder preferences.
+- Add `GameObject/ProBuilder` menu to create primitives with default dimensions.
+
+## [5.0.2] - 2021-03-11
+
+### Bug Fixes
+
+- Fixed `Draw Shape` tool showing incorrect UVs when setting shape bounding box.
+- Fixed `Draw Shape` tool not clearing selection when changing the active shape type.
+- Fixed `Cut Tool` error when pressing `Backspace` with no vertices placed.
+- Fixed `Cut Tool` error when finishing a cut segment with less than 3 vertices.
+- Fixed `Draw Shape` tool truncating shape property fields in the Scene View Overlay.
+
+### Changes
+
+- Moved contents of warning box in `Draw Shape` tool to tooltips.
+- Updated manual documentation.
+
 ## [5.0.1] - 2021-03-09
 
 ### Bug Fixes
