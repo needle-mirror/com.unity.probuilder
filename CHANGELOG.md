@@ -1,9 +1,28 @@
-# Changelog
+Nu# Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+
+## [5.0.7] - 2023-04-04
+
+### Fixed
+
+- [case: PBLD-48] Fixed a bug where the minimum size of a shape did not take into account snap and grid sizes.
+- [case: PBLD-34] Fixed a bug where `Experimental Features Enabled` was not activating when using `Dedicated Server` platform.
+- [case: PBLD-41] Fixed an issue where UV distribution metric would not recalculate after the mesh optimization step.
+- [case: PBLD-32] Fixed `New Shape` start location being incorrect after using right mouse button.
+- [case: PBLD-19] Fixed shape creation when the camera perspective is set to Top.
+- Made minor performance improvements and reduced allocations when querying for components.
+- [case: PBLD-38] Fixed an issue where exported assets would incorrectly use the UInt32 mesh index format.
+- [case: PBLD-43] Fixed an issue where activating the **Edit Shape** tool would prevent the Editor tool context from switching. 
+- [case: PBLD-57] Fixed error when building player with `EntityBehaviour` applied to prefabs.
+
+### Changes
+
+- Updated `Object.FindObjectsOfType` to use the new `Objects.FindObjectsByType` in Unity 2023.1.
+
 
 ## [5.0.6] - 2022-06-30
 
