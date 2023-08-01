@@ -1,7 +1,7 @@
 {
   "name": "com.unity.probuilder",
   "displayName": "ProBuilder",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "unity": "2019.4",
   "description": "Build, edit, and texture custom geometry in Unity. Use ProBuilder for in-scene level design, prototyping, collision meshes, all with on-the-fly play-testing.\n\nAdvanced features include UV editing, vertex colors, parametric shapes, and texture blending. With ProBuilder's model export feature it's easy to tweak your levels in any external 3D modelling suite.\n\nIf you are using URP/HDRP, be careful to also import the corresponding sample project in the section below to get the proper materials.",
   "keywords": [
@@ -54,18 +54,18 @@
     "com.unity.modules.imgui": "1.0.0"
   },
   "relatedPackages": {
-    "com.unity.probuilder.tests": "5.1.0"
+    "com.unity.probuilder.tests": "5.1.1"
   },
   "_upm": {
-    "changelog": "### Fixed\n\n- [case: PBLD-70] Fixed a bug where unused materials were not removed from the mesh renderer when deleting faces.\n- [case: PBLD-52] Fixed a bug where unused materials were not removed from the mesh renderer when detaching faces.\n- [case: STO-2878] Fixed `ProBuilderMesh` renaming `Mesh` asset any time the component instance ID was modified.\n- [case: STO-2878] In Unity Editor 2023.1 and newer, fixed an issue where reverting a prefab instance containing a `ProBuilderMesh` component would leak a `Mesh` asset in the scene.\n- [case: PBLD-61] Fixed a bug where drawing a shape of size zero was causing errors and incorrect values in ProBuilderShape.\n- [case: PBLD-65] Fixed stair shape \"Inner Radius\" parameter not being correctly applied when placing new stair shapes in scene.\n- [case: PBLD-63] \"Strip ProBuilder Scripts\" now creates a mesh asset, fixing an issue where prefabs would no longer contain a valid mesh reference after stripping ProBuilder scripts.\n- [case: PBLD-64] Fixed \"Strip ProBuilder Scripts\" not correctly appyling changes when used in a prefab stage.\n- [case: PBLD-54] Fixed a possible error when inserting edge loop.\n- Arch shape now allows 2 sides.\n\n### Changes\n\n- Moved cut tool cursor icon from runtime to editor resources.\n- Added `ProBuilderMesh.MakeUnique` to ensure `Mesh` asset is distinct.\n\n### Internal\n\n- Fixed \"Detach Faces\" not creating unique mesh asset for duplicate objects."
+    "changelog": "### Fixed\n\n- Fixed an exception in `CombineMeshes.AccumulateMeshesInfo` when a `ProBuilderMesh` contains an empty `Material` array.\n- [case: PBLD-78] Fixed a regression where it was no longer possible to set the extrusion point with the Poly Shape tool.\n- [case: UUM-43960] Fixed warning on project import caused by merge conflicts in a meta file."
   },
   "upmCi": {
-    "footprint": "6fa562d0fb9eda1ccb4e76b6d170a35e7ea5c8c5"
+    "footprint": "34031fe19aed7822adbc883b0f3d4c979cd9eab1"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.probuilder@5.1/manual/index.html",
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.probuilder.git",
     "type": "git",
-    "revision": "c6ea6d4928ae8881d73a4177d18a79e97a2b9955"
+    "revision": "2ffcb3295c03b76fcafb93b92d1b4041e67591c3"
   }
 }
