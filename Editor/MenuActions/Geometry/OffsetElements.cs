@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 using UnityEngine.ProBuilder;
-using UnityEngine.Rendering;
 using ColorUtility = UnityEngine.ProBuilder.ColorUtility;
-using Math = UnityEngine.ProBuilder.Math;
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -18,31 +17,15 @@ namespace UnityEditor.ProBuilder.Actions
             Handle
         }
 
-        static readonly TooltipContent s_TooltipFace = new TooltipContent ( "Offset Faces", "Move the selected elements by a set amount." );
-        static readonly TooltipContent s_TooltipEdge = new TooltipContent ( "Offset Edges", "Move the selected elements by a set amount." );
-        static readonly TooltipContent s_TooltipVert = new TooltipContent ( "Offset Vertices", "Move the selected elements by a set amount." );
-
         internal static Pref<Vector3> s_Translation = new Pref<Vector3>("MoveElements.s_Translation", Vector3.up);
         internal static Pref<CoordinateSpace> s_CoordinateSpace = new Pref<CoordinateSpace>("MoveElements.s_CoordinateSpace", CoordinateSpace.World);
 
         public override ToolbarGroup group { get { return ToolbarGroup.Geometry; } }
 
-        public override Texture2D icon
-        {
-            get { return IconUtility.GetIcon("Toolbar/Offset", IconSkin.Pro); }
-        }
+        public override string iconPath => "Toolbar/OffsetElements";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
 
-        public override TooltipContent tooltip
-        {
-            get
-            {
-                if(ProBuilderEditor.selectMode == SelectMode.Face)
-                    return s_TooltipFace;
-                if(ProBuilderEditor.selectMode == SelectMode.Edge)
-                    return s_TooltipEdge;
-                return s_TooltipVert;
-            }
-        }
+        public override TooltipContent tooltip => new TooltipContent ( "Offset Elements", "Move the selected elements by a set amount." );
 
         public override SelectMode validSelectModes
         {
@@ -58,6 +41,41 @@ namespace UnityEditor.ProBuilder.Actions
         {
             get { return MenuActionState.VisibleAndEnabled; }
         }
+
+        public override VisualElement CreateSettingsContent()
+        {
+            var root = new VisualElement();
+
+            var dist = s_Translation.value;
+            var coord = s_CoordinateSpace.value;
+
+            var spaceField = new EnumField("Coordinate Space", coord);
+            root.Add(spaceField);
+            spaceField.RegisterCallback<ChangeEvent<string>>(evt =>
+            {
+                Enum.TryParse(evt.newValue, out CoordinateSpace newValue);
+                if (s_CoordinateSpace.value == newValue)
+                    return;
+                s_CoordinateSpace.SetValue(newValue);
+                PreviewActionManager.UpdatePreview();
+            });
+
+            var distField = new Vector3Field("Translate");
+            distField.SetValueWithoutNotify(dist);
+            if(PreviewActionManager.delayedPreview)
+                distField.Query<FloatField>().ForEach(ff => ff.isDelayed = true);
+            root.Add(distField);
+            distField.RegisterCallback<ChangeEvent<Vector3>>(evt =>
+            {
+                s_Translation.SetValue(evt.newValue, true);
+                PreviewActionManager.UpdatePreview();
+            });
+
+            return root;
+        }
+
+        public override void DoSceneGUI(SceneView sceneView)
+            => MoveElementsSettings.OnSceneGUI(sceneView);
 
         protected override void DoAlternateAction()
         {
@@ -137,7 +155,6 @@ namespace UnityEditor.ProBuilder.Actions
         void OnEnable()
         {
             titleContent.text = L10n.Tr("Offset Element Settings");
-
             SceneView.duringSceneGui += OnSceneGUI;
         }
 
@@ -180,7 +197,7 @@ namespace UnityEditor.ProBuilder.Actions
 
         static List<Vector3> s_Points = new List<Vector3>();
 
-        void OnSceneGUI(SceneView view)
+        internal static void OnSceneGUI(SceneView view)
         {
             s_Points.Clear();
 

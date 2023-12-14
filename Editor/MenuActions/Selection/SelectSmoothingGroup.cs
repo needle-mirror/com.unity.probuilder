@@ -1,10 +1,7 @@
 using UnityEngine;
-using UnityEditor;
-using UnityEditor.ProBuilder.UI;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.ProBuilder;
-using UnityEditor.ProBuilder;
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -15,10 +12,8 @@ namespace UnityEditor.ProBuilder.Actions
             get { return ToolbarGroup.Selection; }
         }
 
-        public override Texture2D icon
-        {
-            get { return IconUtility.GetIcon("Toolbar/Selection_SelectBySmoothingGroup", IconSkin.Pro); }
-        }
+        public override string iconPath => "Toolbar/Selection_SelectBySmoothingGroup";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
 
         public override TooltipContent tooltip
         {
@@ -27,7 +22,7 @@ namespace UnityEditor.ProBuilder.Actions
 
         static readonly TooltipContent s_Tooltip = new TooltipContent
             (
-                "Select by Smooth",
+                "Select Smoothing Group",
                 "Selects all faces matching the selected smoothing groups."
             );
 

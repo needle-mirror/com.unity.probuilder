@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
+using UnityEngine.UIElements;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -11,7 +13,8 @@ namespace UnityEditor.ProBuilder.Actions
         Pref<DuplicateFaceSetting> m_DuplicateFaceSetting = new Pref<DuplicateFaceSetting>("DuplicateFaces.target", DuplicateFaceSetting.GameObject);
 
         public override ToolbarGroup group { get { return ToolbarGroup.Geometry; } }
-        public override Texture2D icon { get { return IconUtility.GetIcon("Toolbar/Face_Duplicate", IconSkin.Pro); } } //icon to be replaced
+        public override string iconPath => "Toolbar/Face_Duplicate";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
         public override TooltipContent tooltip { get { return s_Tooltip; } }
 
         static readonly TooltipContent s_Tooltip = new TooltipContent
@@ -40,6 +43,26 @@ namespace UnityEditor.ProBuilder.Actions
             GameObject,
             Submesh
         };
+
+        public override VisualElement CreateSettingsContent()
+        {
+            var root = new VisualElement();
+
+            var duplicateType = new EnumField("Duplicate To", m_DuplicateFaceSetting);
+            duplicateType.tooltip = "You can create a new Game Object with the selected face(s), or keep them as part of this object by using a Submesh.";
+            duplicateType.RegisterCallback<ChangeEvent<string>>(evt =>
+            {
+                Enum.TryParse(evt.newValue, out DuplicateFaceSetting newValue);
+                if (m_DuplicateFaceSetting.value == newValue)
+                    return;
+
+                m_DuplicateFaceSetting.value = newValue;
+                ProBuilderSettings.Save();
+            });
+            root.Add(duplicateType);
+
+            return root;
+        }
 
         protected override void OnSettingsGUI()
         {
@@ -117,6 +140,7 @@ namespace UnityEditor.ProBuilder.Actions
                         inverse.Add(i);
 
                 ProBuilderMesh copy = Object.Instantiate(mesh.gameObject, mesh.transform.parent).GetComponent<ProBuilderMesh>();
+                copy.MakeUnique();
                 EditorUtility.SynchronizeWithMeshFilter(copy);
 
                 if (copy.transform.childCount > 0)

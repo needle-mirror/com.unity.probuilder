@@ -1,8 +1,5 @@
 using UnityEngine.ProBuilder;
-using UnityEditor.ProBuilder;
 using UnityEngine;
-using UnityEditor;
-using UnityEditor.ProBuilder.UI;
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -12,11 +9,8 @@ namespace UnityEditor.ProBuilder.Actions
         {
             get { return ToolbarGroup.Object; }
         }
-
-        public override Texture2D icon
-        {
-            get { return IconUtility.GetIcon("Toolbar/Object_FlipNormals", IconSkin.Pro); }
-        }
+        public override string iconPath => "Toolbar/Object_FlipNormals";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
 
         public override TooltipContent tooltip
         {
@@ -55,6 +49,7 @@ namespace UnityEditor.ProBuilder.Actions
                 pb.Optimize();
             }
 
+            ProBuilderEditor.Refresh();
             return new ActionResult(ActionResult.Status.Success, "Flip Object Normals");
         }
     }

@@ -15,11 +15,8 @@ namespace UnityEditor.ProBuilder.Actions
         {
             get { return ToolbarGroup.Object; }
         }
-
-        public override Texture2D icon
-        {
-            get { return IconUtility.GetIcon("Toolbar/Object_Merge", IconSkin.Pro); }
-        }
+        public override string iconPath => "Toolbar/Object_Merge";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
 
         public override TooltipContent tooltip
         {
@@ -69,7 +66,6 @@ namespace UnityEditor.ProBuilder.Actions
             }
 
             ProBuilderEditor.Refresh();
-
             return new ActionResult(ActionResult.Status.Success, "Merged Objects");
         }
     }

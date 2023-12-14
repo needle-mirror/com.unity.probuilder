@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.UIElements;
 using UnityEngine.ProBuilder;
 
 namespace UnityEditor.ProBuilder.Actions
@@ -10,7 +11,7 @@ namespace UnityEditor.ProBuilder.Actions
         GUIContent gc_restrictToSelection = new GUIContent("Current Selection", "Optionally restrict the matches to only those faces on currently selected objects.");
         static readonly TooltipContent s_Tooltip = new TooltipContent
             (
-                "Select by Colors",
+                "Select Vertex Color",
                 "Selects all faces matching the selected vertex colors."
             );
 
@@ -19,10 +20,8 @@ namespace UnityEditor.ProBuilder.Actions
             get { return ToolbarGroup.Selection; }
         }
 
-        public override Texture2D icon
-        {
-            get { return IconUtility.GetIcon("Toolbar/Selection_SelectByVertexColor", IconSkin.Pro); }
-        }
+        public override string iconPath => "Toolbar/Selection_SelectByVertexColor";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
 
         public override TooltipContent tooltip
         {
@@ -48,6 +47,23 @@ namespace UnityEditor.ProBuilder.Actions
 
                 return MenuActionState.Visible;
             }
+        }
+
+        public override VisualElement CreateSettingsContent()
+        {
+            var root = new VisualElement();
+
+            var toggle = new Toggle(gc_restrictToSelection.text);
+            toggle.tooltip = gc_restrictToSelection.tooltip;
+            toggle.SetValueWithoutNotify(m_SearchSelectedObjectsOnly);
+            toggle.RegisterCallback<ChangeEvent<bool>>(evt =>
+            {
+                m_SearchSelectedObjectsOnly.SetValue(evt.newValue);
+                PreviewActionManager.UpdatePreview();
+            });
+            root.Add(toggle);
+
+            return root;
         }
 
         protected override void OnSettingsGUI()

@@ -1,9 +1,9 @@
 using System;
 using UnityEngine;
-using System.Linq;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
 using System.Collections.Generic;
+using UnityEngine.UIElements;
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -18,10 +18,8 @@ namespace UnityEditor.ProBuilder.Actions
             get { return ToolbarGroup.Geometry; }
         }
 
-        public override Texture2D icon
-        {
-            get { return IconUtility.GetIcon("Toolbar/Vert_Weld", IconSkin.Pro); }
-        }
+        public override string iconPath => "Toolbar/Vert_Weld";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
 
         public override TooltipContent tooltip
         {
@@ -48,6 +46,31 @@ namespace UnityEditor.ProBuilder.Actions
         protected override MenuActionState optionsMenuState
         {
             get { return MenuActionState.VisibleAndEnabled; }
+        }
+
+        public override VisualElement CreateSettingsContent()
+        {
+            var root = new VisualElement();
+            root.style.minWidth = 150;
+
+            var floatField = new FloatField(gc_weldDistance.text);
+            floatField.isDelayed = PreviewActionManager.delayedPreview;
+            floatField.tooltip = gc_weldDistance.tooltip;
+            floatField.SetValueWithoutNotify(m_WeldDistance);
+            floatField.Q("unity-text-input").style.minWidth = 50;
+            floatField.RegisterCallback<ChangeEvent<float>>(evt =>
+            {
+                if (evt.newValue < k_MinWeldDistance)
+                {
+                    m_WeldDistance.SetValue(k_MinWeldDistance);
+                    floatField.SetValueWithoutNotify(m_WeldDistance);
+                }
+                else
+                    m_WeldDistance.SetValue(evt.newValue);
+                PreviewActionManager.UpdatePreview();
+            });
+            root.Add(floatField);
+            return root;
         }
 
         protected override void OnSettingsGUI()

@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
+using System;
+using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -10,7 +13,8 @@ namespace UnityEditor.ProBuilder.Actions
         Pref<DetachSetting> m_DetachSetting = new Pref<DetachSetting>("DetachFaces.target", DetachSetting.GameObject);
 
         public override ToolbarGroup group { get { return ToolbarGroup.Geometry; } }
-        public override Texture2D icon { get { return IconUtility.GetIcon("Toolbar/Face_Detach", IconSkin.Pro); } }
+        public override string iconPath => "Toolbar/Face_Detach";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
         public override TooltipContent tooltip { get { return s_Tooltip; } }
 
         static readonly TooltipContent s_Tooltip = new TooltipContent
@@ -39,6 +43,22 @@ namespace UnityEditor.ProBuilder.Actions
             GameObject,
             Submesh
         };
+
+        public override VisualElement CreateSettingsContent()
+        {
+            var root = new VisualElement();
+
+            var detachFace = new EnumField("Detach To", m_DetachSetting);
+            detachFace.tooltip = "You can create a new Game Object with the selected face(s), or keep them as part of this object by using a Submesh.";
+            detachFace.RegisterCallback<ChangeEvent<string>>(evt =>
+            {
+                Enum.TryParse(evt.newValue, out DetachSetting newValue);
+                m_DetachSetting.SetValue(newValue);
+            });
+            root.Add(detachFace);
+
+            return root;
+        }
 
         protected override void OnSettingsGUI()
         {

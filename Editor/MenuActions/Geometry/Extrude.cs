@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.ProBuilder;
 using UnityEditor.ProBuilder;
@@ -12,16 +13,14 @@ namespace UnityEditor.ProBuilder.Actions
             get { return ToolbarGroup.Geometry; }
         }
 
-        public override Texture2D icon
-        {
-            get { return null; }
-        }
+        public override string iconPath => String.Empty;
+        public override Texture2D icon => null;
 
         static readonly TooltipContent s_Tooltip = new TooltipContent
-            (
-                "Extrude", "",
-                keyCommandSuper, 'E'
-            );
+        (
+            "Extrude", "",
+            keyCommandSuper, 'E'
+        );
 
         public override TooltipContent tooltip
         {
@@ -66,6 +65,19 @@ namespace UnityEditor.ProBuilder.Actions
                 default:
                     return ActionResult.NoSelection;
             }
+        }
+
+        internal override string GetMenuItemOverride()
+        {
+            return @"                switch (ProBuilderEditor.selectMode)
+                {
+                    case SelectMode.Edge:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<ExtrudeEdges>(), true));
+                        break;
+                    case SelectMode.Face:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<ExtrudeFaces>(), true));
+                        break;
+                }";
         }
     }
 }

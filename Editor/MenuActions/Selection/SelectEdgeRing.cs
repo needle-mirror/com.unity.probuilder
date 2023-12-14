@@ -1,10 +1,9 @@
 using UnityEngine;
-using UnityEditor;
-using UnityEditor.ProBuilder.UI;
 using System.Linq;
+using UnityEngine.UIElements;
 using UnityEngine.ProBuilder;
-using UnityEditor.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
+
 
 namespace UnityEditor.ProBuilder.Actions
 {
@@ -18,10 +17,8 @@ namespace UnityEditor.ProBuilder.Actions
             get { return ToolbarGroup.Selection; }
         }
 
-        public override Texture2D icon
-        {
-            get { return IconUtility.GetIcon("Toolbar/Selection_Ring", IconSkin.Pro); }
-        }
+        public override string iconPath => "Toolbar/Selection_Ring_Edge";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
 
         public override TooltipContent tooltip
         {
@@ -33,7 +30,7 @@ namespace UnityEditor.ProBuilder.Actions
             get { return 2; }
         }
 
-        protected override bool hasFileMenuEntry
+        protected internal override bool hasFileMenuEntry
         {
             get { return false; }
         }
@@ -101,6 +98,23 @@ namespace UnityEditor.ProBuilder.Actions
                 return new ActionResult(ActionResult.Status.Success, "Select Edge Ring");
 
             return new ActionResult(ActionResult.Status.Failure, "Nothing to Ring");
+        }
+
+        public override VisualElement CreateSettingsContent()
+        {
+            var root = new VisualElement();
+
+            var toggle = new Toggle(gc_selectIterative.text);
+            toggle.tooltip = gc_selectIterative.tooltip;
+            toggle.SetValueWithoutNotify(m_SelectIterative);
+            toggle.RegisterCallback<ChangeEvent<bool>>(evt =>
+            {
+                m_SelectIterative.SetValue(evt.newValue);
+                PreviewActionManager.UpdatePreview();
+            });
+            root.Add(toggle);
+
+            return root;
         }
 
         protected override void OnSettingsGUI()

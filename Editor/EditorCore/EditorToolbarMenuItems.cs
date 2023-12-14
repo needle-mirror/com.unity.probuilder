@@ -8,14 +8,14 @@
 using UnityEngine;
 using UnityEngine.ProBuilder;
 using UnityEditor.ProBuilder.Actions;
-using UnityEditor.ShortcutManagement;
+using UnityEditor.Actions;
+using UnityEditor.EditorTools;
 
 namespace UnityEditor.ProBuilder
 {
     static class EditorToolbarMenuItem
     {
-        const string k_MenuPrefix = "Tools/ProBuilder/";
-        const string k_ShortcutPrefix = "ProBuilder/";
+        internal const string k_MenuPrefix = "Tools/ProBuilder/";
 
 		[MenuItem(k_MenuPrefix + "Editors/New Bezier Shape", true, PreferenceKeys.menuEditor + 1)]
 		static bool MenuVerify_NewBezierShape()
@@ -30,44 +30,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<NewBezierShape>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
-			}
-		}
-
-		[MenuItem(k_MenuPrefix + "Editors/New Poly Shape Toggle", true, PreferenceKeys.menuEditor + 1)]
-		static bool MenuVerify_NewPolyShapeToggle()
-		{
-			var instance = EditorToolbarLoader.GetInstance<NewPolyShapeToggle>();
-			return instance != null && instance.enabled;
-		}
-
-		[MenuItem(k_MenuPrefix + "Editors/New Poly Shape Toggle", false, PreferenceKeys.menuEditor + 1)]
-		static void MenuPerform_NewPolyShapeToggle()
-		{
-			var instance = EditorToolbarLoader.GetInstance<NewPolyShapeToggle>();
-			if(instance != null && instance.enabled)
-			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
-			}
-		}
-
-		[MenuItem(k_MenuPrefix + "Editors/New Shape Toggle %#k", true, PreferenceKeys.menuEditor + 1)]
-		static bool MenuVerify_NewShapeToggle()
-		{
-			var instance = EditorToolbarLoader.GetInstance<NewShapeToggle>();
-			return instance != null && instance.enabled;
-		}
-
-		[MenuItem(k_MenuPrefix + "Editors/New Shape Toggle %#k", false, PreferenceKeys.menuEditor + 1)]
-		static void MenuPerform_NewShapeToggle()
-		{
-			var instance = EditorToolbarLoader.GetInstance<NewShapeToggle>();
-			if(instance != null && instance.enabled)
-			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -84,8 +49,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<OpenLightmapUVEditor>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -102,8 +68,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<OpenMaterialEditor>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -120,8 +87,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<OpenSmoothingEditor>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -138,8 +106,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<OpenUVEditor>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -156,8 +125,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<OpenVertexColorEditor>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -174,8 +144,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<OpenVertexPositionEditor>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -192,8 +163,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ExportAsset>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -210,8 +182,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ExportObj>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -228,8 +201,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ExportPly>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -246,8 +220,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ExportStlAscii>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -264,14 +239,16 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ExportStlBinary>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Bevel Edges", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_BevelEdges()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<BevelEdges>();
 			return instance != null && instance.enabled;
 		}
@@ -282,50 +259,54 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<BevelEdges>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Bridge Edges &b", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Bridge Edges &B", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_BridgeEdges()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<BridgeEdges>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Bridge Edges &b", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Bridge Edges &B", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_BridgeEdges()
 		{
 			var instance = EditorToolbarLoader.GetInstance<BridgeEdges>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Collapse Vertices &c", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Collapse Vertices &C", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_CollapseVertices()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<CollapseVertices>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Collapse Vertices &c", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Collapse Vertices &C", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_CollapseVertices()
 		{
 			var instance = EditorToolbarLoader.GetInstance<CollapseVertices>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Conform Face Normals", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_ConformFaceNormals()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<ConformFaceNormals>();
 			return instance != null && instance.enabled;
 		}
@@ -336,33 +317,36 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ConformFaceNormals>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Delete Faces [backspace]", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Delete Faces _BACKSPACE", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_DeleteFaces()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<DeleteFaces>();
 			return instance != null && instance.enabled;
 		}
 
-		[Shortcut(k_ShortcutPrefix + "Geometry/Delete Faces", typeof(UnityEditor.SceneView), (KeyCode) 8, (ShortcutModifiers) 0)]
-		[MenuItem(k_MenuPrefix + "Geometry/Delete Faces [backspace]", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Delete Faces _BACKSPACE", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_DeleteFaces()
 		{
 			var instance = EditorToolbarLoader.GetInstance<DeleteFaces>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Detach Faces", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_DetachFaces()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<DetachFaces>();
 			return instance != null && instance.enabled;
 		}
@@ -373,14 +357,15 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<DetachFaces>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,false));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Duplicate Faces", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_DuplicateFaces()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<DuplicateFaces>();
 			return instance != null && instance.enabled;
 		}
@@ -391,32 +376,42 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<DuplicateFaces>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,false));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Extrude %e", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Extrude %E", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_Extrude()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<Extrude>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Extrude %e", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Extrude %E", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_Extrude()
 		{
 			var instance = EditorToolbarLoader.GetInstance<Extrude>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+                switch (ProBuilderEditor.selectMode)
+                {
+                    case SelectMode.Edge:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<ExtrudeEdges>(), true));
+                        break;
+                    case SelectMode.Face:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<ExtrudeFaces>(), true));
+                        break;
+                }
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Fill Hole", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_FillHole()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<FillHole>();
 			return instance != null && instance.enabled;
 		}
@@ -427,14 +422,15 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<FillHole>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Flip Face Edge", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_FlipFaceEdge()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<FlipFaceEdge>();
 			return instance != null && instance.enabled;
 		}
@@ -445,50 +441,56 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<FlipFaceEdge>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Flip Face Normals &n", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Flip Face Normals &N", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_FlipFaceNormals()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<FlipFaceNormals>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Flip Face Normals &n", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Flip Face Normals &N", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_FlipFaceNormals()
 		{
 			var instance = EditorToolbarLoader.GetInstance<FlipFaceNormals>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Insert Edge Loop &u", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Insert Edge Loop &U", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_InsertEdgeLoop()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<InsertEdgeLoop>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Insert Edge Loop &u", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Insert Edge Loop &U", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_InsertEdgeLoop()
 		{
 			var instance = EditorToolbarLoader.GetInstance<InsertEdgeLoop>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Merge Faces", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_MergeFaces()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<MergeFaces>();
 			return instance != null && instance.enabled;
 		}
@@ -499,14 +501,16 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<MergeFaces>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Offset Elements", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_OffsetElements()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<OffsetElements>();
 			return instance != null && instance.enabled;
 		}
@@ -517,86 +521,102 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<OffsetElements>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Set Pivot To Selection %j", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Set Pivot To Selection %J", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_SetPivotToSelection()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SetPivotToSelection>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Set Pivot To Selection %j", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Set Pivot To Selection %J", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_SetPivotToSelection()
 		{
 			var instance = EditorToolbarLoader.GetInstance<SetPivotToSelection>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Smart Connect &e", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Smart Connect &E", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_SmartConnect()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SmartConnect>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Smart Connect &e", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Smart Connect &E", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_SmartConnect()
 		{
 			var instance = EditorToolbarLoader.GetInstance<SmartConnect>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Smart Subdivide &s", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Smart Subdivide &S", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_SmartSubdivide()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SmartSubdivide>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Smart Subdivide &s", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Smart Subdivide &S", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_SmartSubdivide()
 		{
 			var instance = EditorToolbarLoader.GetInstance<SmartSubdivide>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+                switch (ProBuilderEditor.selectMode)
+                {
+                    case SelectMode.Edge:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<SubdivideEdges>(), true));
+                        break;
+                    default:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<SubdivideFaces>(), true));
+                        break;
+                }
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Split Vertices &x", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Split Vertices &X", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_SplitVertices()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SplitVertices>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Split Vertices &x", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Split Vertices &X", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_SplitVertices()
 		{
 			var instance = EditorToolbarLoader.GetInstance<SplitVertices>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Geometry/Triangulate Faces", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_TriangulateFaces()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<TriangulateFaces>();
 			return instance != null && instance.enabled;
 		}
@@ -607,32 +627,35 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<TriangulateFaces>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Weld Vertices &v", true, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Weld Vertices &V", true, PreferenceKeys.menuGeometry + 3)]
 		static bool MenuVerify_WeldVertices()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<WeldVertices>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Geometry/Weld Vertices &v", false, PreferenceKeys.menuGeometry + 3)]
+		[MenuItem(k_MenuPrefix + "Geometry/Weld Vertices &V", false, PreferenceKeys.menuGeometry + 3)]
 		static void MenuPerform_WeldVertices()
 		{
 			var instance = EditorToolbarLoader.GetInstance<WeldVertices>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Interaction/Toggle Drag Rect Mode", true, PreferenceKeys.menuSelection + 1)]
 		static bool MenuVerify_ToggleDragRectMode()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<ToggleDragRectMode>();
 			return instance != null && instance.enabled;
 		}
@@ -643,14 +666,16 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ToggleDragRectMode>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Interaction/Toggle Drag Selection Mode", true, PreferenceKeys.menuSelection + 1)]
 		static bool MenuVerify_ToggleDragSelectionMode()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<ToggleDragSelectionMode>();
 			return instance != null && instance.enabled;
 		}
@@ -661,33 +686,36 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ToggleDragSelectionMode>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Interaction/Toggle Handle Orientation [p]", true, PreferenceKeys.menuSelection + 1)]
+		[MenuItem(k_MenuPrefix + "Interaction/Toggle Handle Orientation _P", true, PreferenceKeys.menuSelection + 1)]
 		static bool MenuVerify_ToggleHandleOrientation()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<ToggleHandleOrientation>();
 			return instance != null && instance.enabled;
 		}
 
-		[Shortcut(k_ShortcutPrefix + "Interaction/Toggle Handle Orientation", typeof(UnityEditor.SceneView), (KeyCode) 112, (ShortcutModifiers) 0)]
-		[MenuItem(k_MenuPrefix + "Interaction/Toggle Handle Orientation [p]", false, PreferenceKeys.menuSelection + 1)]
+		[MenuItem(k_MenuPrefix + "Interaction/Toggle Handle Orientation _P", false, PreferenceKeys.menuSelection + 1)]
 		static void MenuPerform_ToggleHandleOrientation()
 		{
 			var instance = EditorToolbarLoader.GetInstance<ToggleHandleOrientation>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Interaction/Toggle Select Back Faces", true, PreferenceKeys.menuSelection + 1)]
 		static bool MenuVerify_ToggleSelectBackFaces()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<ToggleSelectBackFaces>();
 			return instance != null && instance.enabled;
 		}
@@ -698,26 +726,29 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ToggleSelectBackFaces>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Interaction/Toggle X Ray &#x", true, PreferenceKeys.menuSelection + 1)]
+		[MenuItem(k_MenuPrefix + "Interaction/Toggle X Ray &#X", true, PreferenceKeys.menuSelection + 1)]
 		static bool MenuVerify_ToggleXRay()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<ToggleXRay>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Interaction/Toggle X Ray &#x", false, PreferenceKeys.menuSelection + 1)]
+		[MenuItem(k_MenuPrefix + "Interaction/Toggle X Ray &#X", false, PreferenceKeys.menuSelection + 1)]
 		static void MenuPerform_ToggleXRay()
 		{
 			var instance = EditorToolbarLoader.GetInstance<ToggleXRay>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -734,8 +765,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<CenterPivot>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -752,8 +784,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ConformObjectNormals>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -770,8 +803,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<FlipObjectNormals>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -788,8 +822,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<FreezeTransform>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -806,8 +841,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<MergeObjects>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -824,8 +860,8 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<MirrorObjects>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -842,8 +878,8 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<ProBuilderize>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -860,8 +896,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<SetCollider>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -878,8 +915,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<SetTrigger>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -896,8 +934,9 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<SubdivideObject>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
@@ -914,32 +953,35 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<TriangulateObject>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Grow Selection &g", true, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Grow Selection &G", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_GrowSelection()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<GrowSelection>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Grow Selection &g", false, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Grow Selection &G", false, PreferenceKeys.menuSelection + 0)]
 		static void MenuPerform_GrowSelection()
 		{
 			var instance = EditorToolbarLoader.GetInstance<GrowSelection>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Selection/Select Hole", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_SelectHole()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SelectHole>();
 			return instance != null && instance.enabled;
 		}
@@ -950,32 +992,43 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<SelectHole>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Select Loop &l", true, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Select Loop &L", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_SelectLoop()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SelectLoop>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Select Loop &l", false, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Select Loop &L", false, PreferenceKeys.menuSelection + 0)]
 		static void MenuPerform_SelectLoop()
 		{
 			var instance = EditorToolbarLoader.GetInstance<SelectLoop>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+                switch (ProBuilderEditor.selectMode)
+                {
+                    case SelectMode.Edge:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<SelectEdgeLoop>(), true));
+                        break;
+                    case SelectMode.Face:
+                        EditorToolbarLoader.GetInstance<SelectFaceLoop>().PerformAction();
+                        break;
+                }
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Selection/Select Material", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_SelectMaterial()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SelectMaterial>();
 			return instance != null && instance.enabled;
 		}
@@ -986,32 +1039,42 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<SelectMaterial>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Select Ring &r", true, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Select Ring &R", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_SelectRing()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SelectRing>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Select Ring &r", false, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Select Ring &R", false, PreferenceKeys.menuSelection + 0)]
 		static void MenuPerform_SelectRing()
 		{
 			var instance = EditorToolbarLoader.GetInstance<SelectRing>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+                switch (ProBuilderEditor.selectMode)
+                {
+                    case SelectMode.Edge:
+                        EditorAction.Start(new MenuActionSettings(EditorToolbarLoader.GetInstance<SelectEdgeRing>(), true));
+                        break;
+                    case SelectMode.Face:
+                        EditorToolbarLoader.GetInstance<SelectFaceRing>().PerformAction();
+                        break;
+                }
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Selection/Select Smoothing Group", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_SelectSmoothingGroup()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SelectSmoothingGroup>();
 			return instance != null && instance.enabled;
 		}
@@ -1022,14 +1085,15 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<SelectSmoothingGroup>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
 		[MenuItem(k_MenuPrefix + "Selection/Select Vertex Color", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_SelectVertexColor()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<SelectVertexColor>();
 			return instance != null && instance.enabled;
 		}
@@ -1040,26 +1104,28 @@ namespace UnityEditor.ProBuilder
 			var instance = EditorToolbarLoader.GetInstance<SelectVertexColor>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				EditorAction.Start(new MenuActionSettings(instance,true));
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Shrink Selection &#g", true, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Shrink Selection &#G", true, PreferenceKeys.menuSelection + 0)]
 		static bool MenuVerify_ShrinkSelection()
 		{
+			if (ToolManager.activeContextType != typeof(PositionToolContext)) return false;
 			var instance = EditorToolbarLoader.GetInstance<ShrinkSelection>();
 			return instance != null && instance.enabled;
 		}
 
-		[MenuItem(k_MenuPrefix + "Selection/Shrink Selection &#g", false, PreferenceKeys.menuSelection + 0)]
+		[MenuItem(k_MenuPrefix + "Selection/Shrink Selection &#G", false, PreferenceKeys.menuSelection + 0)]
 		static void MenuPerform_ShrinkSelection()
 		{
 			var instance = EditorToolbarLoader.GetInstance<ShrinkSelection>();
 			if(instance != null && instance.enabled)
 			{
-				EditorUtility.ShowNotification(instance.PerformAction().notification);
-				ProBuilderAnalytics.SendActionEvent(instance, ProBuilderAnalytics.TriggerType.MenuOrShortcut);
+				PreviewActionManager.EndPreview();
+				instance.PerformAction();
+				ProBuilderAnalytics.SendActionEvent(instance);
 			}
 		}
 	}

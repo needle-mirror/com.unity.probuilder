@@ -1,27 +1,173 @@
-﻿using UnityEditor.EditorTools;
+﻿using System;
+using System.Linq;
+using UnityEditor.EditorTools;
 using UnityEngine;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
 
 using Math = UnityEngine.ProBuilder.Math;
 using UObject = UnityEngine.Object;
-
-#if UNITY_2020_2_OR_NEWER
-using EditorToolManager = UnityEditor.EditorTools.EditorToolManager;
 using ToolManager = UnityEditor.EditorTools.ToolManager;
-#else
-using EditorToolManager = UnityEditor.EditorTools.EditorToolContext;
-using ToolManager = UnityEditor.EditorTools.EditorTools;
-#endif
 
 namespace UnityEditor.ProBuilder
 {
+
+    /// <summary>
+    /// Represents the [PolyShape tool](../manual/polyshape.html) button on the [ProBuilder toolbar](../manual/toolbar.html) in the Editor.
+    /// </summary>
+    [EditorTool("Create PolyShape", toolPriority = 1001)]
+    public class DrawPolyShapeTool : PolyShapeTool
+    {
+        [MenuItem(EditorToolbarMenuItem.k_MenuPrefix + "Editors/New PolyShape", false, PreferenceKeys.menuEditor + 1)]
+        static void MenuPerform_NewShape()
+        {
+            ToolManager.SetActiveTool<DrawPolyShapeTool>();
+            ProBuilderAnalytics.SendActionEvent("New PolyShape", nameof(DrawPolyShapeTool));
+        }
+
+        PolyShape m_PolyShape = null;
+        bool m_CanCreatePolyShape = false;
+
+        static GUIContent s_IconContent;
+
+        /// <summary>
+        /// Gets the icon and tooltip for the PolyShapeTool.
+        /// </summary>
+        public override GUIContent toolbarIcon
+        {
+            get
+            {
+                if(s_IconContent == null)
+                    s_IconContent = new GUIContent()
+                    {
+                        image = IconUtility.GetIcon("Toolbar/CreatePolyShape"),
+                        text = String.Empty,
+                        tooltip = "Create PolyShape"
+                    };
+                return s_IconContent;
+            }
+        }
+
+        public override void OnActivated()
+        {
+            MeshSelection.SetSelection((GameObject)null);
+            ToolManager.SetActiveContext<GameObjectToolContext>();
+
+            base.OnActivated();
+        }
+
+        public override void OnWillBeDeactivated()
+        {
+            m_PolyShape = null;
+            base.OnWillBeDeactivated();
+        }
+
+        public override void OnToolGUI(EditorWindow window)
+        {
+            if (m_PolyShape == null)
+                m_CanCreatePolyShape = TryCreatePolyShape();
+
+            var evt = Event.current;
+            if (polygon.polyEditMode == PolyShape.PolyEditMode.Height)
+            {
+                if (evt.type == EventType.MouseUp && evt.button == 0 && !EditorHandleUtility.IsAppendModifier(evt.modifiers))
+                {
+                    evt.Use();
+                    UndoUtility.RecordObject(polygon, "Set Height");
+                    m_CanCreatePolyShape = TryCreatePolyShape();
+                }
+            }
+
+            if (!m_CanCreatePolyShape)
+                ToolManager.RestorePreviousTool();
+
+            base.OnToolGUI(window);
+        }
+
+        bool TryCreatePolyShape()
+        {
+            var newPolyshape = CanCreateNewPolyShape();
+            if (newPolyshape)
+            {
+                GameObject go = new GameObject("PolyShape");
+                UndoUtility.RegisterCreatedObjectUndo(go, "Create Poly Shape");
+                m_PolyShape = Undo.AddComponent<PolyShape>(go);
+                ProBuilderMesh pb = Undo.AddComponent<ProBuilderMesh>(go);
+                pb.CreateShapeFromPolygon(m_PolyShape.m_Points, m_PolyShape.extrude, m_PolyShape.flipNormals);
+                EditorUtility.InitObject(pb);
+
+                // Special case - we don't want to reset the grid pivot because we rely on it to set the active plane for
+                // interaction, regardless of whether snapping is enabled or not.
+                if (ProGridsInterface.SnapEnabled() || ProGridsInterface.GridVisible())
+                {
+                    Vector3 pivot;
+                    if (ProGridsInterface.GetPivot(out pivot))
+                        go.transform.position = pivot;
+                }
+
+                m_PolyShape.polyEditMode = PolyShape.PolyEditMode.Path;
+                var activeShape = polygon == null ? m_PolyShape : polygon;
+
+                UpdateTarget(m_PolyShape);
+
+                Selection.activeObject = activeShape;
+            }
+
+            return newPolyshape;
+        }
+
+        static bool CanCreateNewPolyShape()
+        {
+            //If inspector is locked we cannot create new PolyShape.
+            //First created inspector seems to hold a specific semantic where
+            //if not unlocked no matter how many inspectors are present they will
+            //not allow the creation of new PolyShape.
+            var inspWindows = InspectorWindow.GetInspectors();
+
+            if (inspWindows.Any(x => x.isLocked))
+            {
+                if (UnityEditor.EditorUtility.DisplayDialog(
+                        L10n.Tr("Inspector Locked"),
+                        L10n.Tr("To create new Poly Shape you need access to all Inspectors, which are currently locked. Do you wish to unlock all Inpsectors?"),
+                        L10n.Tr("Unlock"),
+                        L10n.Tr("Cancel")))
+                {
+                    foreach (var insp in inspWindows)
+                        insp.isLocked = false;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
     /// <summary>
     /// Represents the [PolyShape tool](../manual/polyshape.html) button on the [ProBuilder toolbar](../manual/toolbar.html) in the Editor.
     /// </summary>
     [EditorTool("Edit PolyShape", typeof(PolyShape))]
     public class PolyShapeTool : EditorTool
     {
+        [MenuItem("Tools/ProBuilder/Edit/Edit PolyShape", true, PreferenceKeys.menuEditor + 10)]
+        static bool ValidateEditShapeTool()
+        {
+            foreach (var go in Selection.gameObjects)
+                if (go.TryGetComponent<PolyShape>(out _)) return true;
+
+            return false;
+        }
+
+        [MenuItem("Tools/ProBuilder/Edit/Edit PolyShape", false, PreferenceKeys.menuEditor + 10)]
+        static void ActivateEditShapeTool()
+        {
+            ToolManager.SetActiveTool<PolyShapeTool>();
+            ProBuilderAnalytics.SendActionEvent("Edit PolyShape", nameof(PolyShapeTool));
+        }
+
+
         static readonly Color k_HandleColor = new Color(.8f, .8f, .8f, 1f);
         static readonly Color k_HandleColorGreen = new Color(.01f, .9f, .3f, 1f);
         static readonly Color k_HandleSelectedColor = new Color(.01f, .8f, .98f, 1f);
@@ -48,10 +194,9 @@ namespace UnityEditor.ProBuilder
                 if(s_IconContent == null)
                     s_IconContent = new GUIContent()
                     {
-                        //image = IconUtility.GetIcon("Tools/PolyShape/CreatePolyShape"),
-                        image = IconUtility.GetIcon("Toolbar/NewPolyShape"),
-                        text = "Create PolyShape",
-                        tooltip = "Create PolyShape"
+                        image = IconUtility.GetIcon("Toolbar/CreatePolyShape"),
+                        text = "Edit PolyShape",
+                        tooltip = "Edit PolyShape"
                     };
                 return s_IconContent;
             }
@@ -123,83 +268,54 @@ namespace UnityEditor.ProBuilder
 
         void OnEnable()
         {
-            m_OverlayTitle = new GUIContent("Poly Shape Tool");
-
-#if !UNITY_2020_2_OR_NEWER
-            ToolManager.activeToolChanged += OnToolChanged;
-#endif
-            ProBuilderEditor.selectModeChanged += OnSelectModeChanged;
-            MeshSelection.objectSelectionChanged += OnObjectSelectionChanged;
-            Undo.undoRedoPerformed += UndoRedoPerformed;
+            m_OverlayTitle = new GUIContent("PolyShape Settings");
         }
 
-        void OnDisable()
+        void OnDisable(){}
+
+        public override void OnActivated()
         {
             SetPolyEditMode(PolyShape.PolyEditMode.None);
-#if !UNITY_2020_2_OR_NEWER
-            ToolManager.activeToolChanged -= OnToolChanged;
-#endif
-            ProBuilderEditor.selectModeChanged -= OnSelectModeChanged;
-            MeshSelection.objectSelectionChanged -= OnObjectSelectionChanged;
-            Undo.undoRedoPerformed -= UndoRedoPerformed;
+
+            ProBuilderEditor.selectModeChanged += OnSelectModeChanged;
+            MeshSelection.objectSelectionChanged += OnObjectSelectionChanged;
+            ToolManager.activeContextChanged += OnActiveContextChanged;
+            Undo.undoRedoPerformed += UndoRedoPerformed;
+
+            m_Target = null;
+            UpdateTarget();
         }
 
-#if !UNITY_2020_2_OR_NEWER
-        void End()
-#else
         public override void OnWillBeDeactivated()
-#endif
         {
+            ProBuilderEditor.selectModeChanged -= OnSelectModeChanged;
+            MeshSelection.objectSelectionChanged -= OnObjectSelectionChanged;
+            ToolManager.activeContextChanged -= OnActiveContextChanged;
+            Undo.undoRedoPerformed -= UndoRedoPerformed;
             if(polygon != null && polygon.polyEditMode != PolyShape.PolyEditMode.None)
                 SetPolyEditMode(PolyShape.PolyEditMode.None);
 
             polygon = null;
         }
 
-#if !UNITY_2020_2_OR_NEWER
-        void OnToolChanged()
-        {
-            if(ToolManager.IsActiveTool(this))
-            {
-                UpdateTarget();
-                if(polygon == null)
-                    End();
-            }
-            else if(polygon != null)
-                End();
-        }
-#else
-        public override void OnActivated()
-        {
-            UpdateTarget();
-        }
-#endif
-
-
         internal void UpdateTarget(PolyShape shape = null)
         {
             if(shape != null)
                 m_Target = shape;
 
-            if(target is PolyShape)
+            if(target is PolyShape ps)
             {
-                polygon = ( (PolyShape) target );
+                polygon = ps;
                 SetPolyEditMode(PolyShape.PolyEditMode.Edit);
             }
-            else if(target is GameObject)
+            else if(target is GameObject go)
             {
-                PolyShape ps;
-                if(( (GameObject) target ).transform.TryGetComponent<PolyShape>(out ps))
+                if(go.transform.TryGetComponent<PolyShape>(out var psComp))
                 {
-                    polygon = ps;
+                    polygon = psComp;
                     SetPolyEditMode(PolyShape.PolyEditMode.Edit);
                 }
             }
-
-            EditorApplication.delayCall += () =>
-            {
-                ProBuilderEditor.selectMode = SelectMode.Object;
-            };
         }
 
         void LeaveTool()
@@ -207,7 +323,7 @@ namespace UnityEditor.ProBuilder
             //Quit Polygon edit mode and deactivate the tool
             SetPolyEditMode(PolyShape.PolyEditMode.None);
             polygon = null;
-            ToolManager.RestorePreviousTool();
+            ToolManager.RestorePreviousPersistentTool();
         }
 
         /// <summary>
@@ -300,6 +416,8 @@ namespace UnityEditor.ProBuilder
             if(currentPolygon == null)
                 return;
 
+            EditorGUILayout.BeginVertical(GUILayout.Width(300));
+
             switch (currentPolygon.polyEditMode)
             {
                 case PolyShape.PolyEditMode.Path:
@@ -318,7 +436,6 @@ namespace UnityEditor.ProBuilder
                 {
                     if(GUILayout.Button("Quit Editing", UI.EditorGUIUtility.GetActiveStyle("Button")))
                         LeaveTool();
-
                     EditorGUILayout.HelpBox("Move Poly Shape points to update the shape\nPress 'Enter' or 'Space' to Finalize", MessageType.Info);
                     break;
                 }
@@ -352,15 +469,15 @@ namespace UnityEditor.ProBuilder
 
                 RebuildPolyShapeMesh(currentPolygon);
             }
+            EditorGUILayout.EndVertical();
         }
 
-        void SetPolyEditMode(PolyShape.PolyEditMode mode)
+        internal void SetPolyEditMode(PolyShape.PolyEditMode mode)
         {
             if(polygon == null)
                 return;
 
             PolyShape.PolyEditMode old = polygon.polyEditMode;
-
             if (mode != old)
             {
                 GUIUtility.hotControl = 0;
@@ -489,7 +606,7 @@ namespace UnityEditor.ProBuilder
             }
             else if (polygon.polyEditMode == PolyShape.PolyEditMode.Path)
             {
-                if (eventType == EventType.MouseDown && HandleUtility.nearestControl == m_ControlId)
+                if (eventType == EventType.MouseDown && evt.button == 0 && HandleUtility.nearestControl == m_ControlId)
                 {
                     if (polygon.m_Points.Count < 1)
                         SetupInputPlane(evt.mousePosition);
@@ -528,6 +645,9 @@ namespace UnityEditor.ProBuilder
                             m_NextMouseUpAdvancesMode = true;
                             return;
                         }
+
+                        if(polygon.m_Points.Count == 0)
+                            Selection.activeObject = polygon;
 
                         polygon.m_Points.Add(point);
 
@@ -597,7 +717,7 @@ namespace UnityEditor.ProBuilder
                                     HandleUtility.GetHandleSize(wp) * k_HandleSize, evt.type);
                             }
 
-                            if (evt.type == EventType.MouseDown && HandleUtility.nearestControl == m_ControlId)
+                            if (evt.type == EventType.MouseDown && evt.button == 0 && HandleUtility.nearestControl == m_ControlId)
                             {
                                 evt.Use();
 
@@ -658,8 +778,7 @@ namespace UnityEditor.ProBuilder
             bool used = evt.type == EventType.Used;
 
             if (!used &&
-                (evt.type == EventType.MouseDown &&
-                 evt.button == 0 &&
+                (evt.type == EventType.MouseDown && evt.button == 0 &&
                  !EditorHandleUtility.IsAppendModifier(evt.modifiers)))
             {
                 m_SelectedIndex = -1;
@@ -924,22 +1043,24 @@ namespace UnityEditor.ProBuilder
                 RebuildPolyShapeMesh(polygon);
         }
 
+        void OnActiveContextChanged()
+        {
+            ToolManager.RestorePreviousPersistentTool();
+        }
+
         void OnSelectModeChanged(SelectMode selectMode)
         {
-            if(!ToolManager.IsActiveTool(this))
-                return;
-
             if(MeshSelection.activeMesh)
             {
                 PolyShape shape = MeshSelection.activeMesh.GetComponent<PolyShape>();
-                if(shape != null && shape != polygon || selectMode != SelectMode.Object)
+                if(shape != null && shape != polygon)
                     LeaveTool();
             }
         }
 
         void OnObjectSelectionChanged()
         {
-            if(!ToolManager.IsActiveTool(this) || polygon == null)
+            if(polygon == null)
                 return;
 
             if(MeshSelection.activeMesh)

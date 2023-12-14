@@ -5,66 +5,39 @@ namespace UnityEditor.ProBuilder.Actions
 {
     sealed class ToggleDragSelectionMode : MenuAction
     {
-        SelectionModifierBehavior modifier
-        {
-            get { return ProBuilderEditor.selectionModifierBehavior; }
-            set { ProBuilderEditor.selectionModifierBehavior = value; }
-        }
-
         public override ToolbarGroup group
         {
             get { return ToolbarGroup.Selection; }
         }
 
-        public override Texture2D icon
-        {
-            get
-            {
-                if (modifier == SelectionModifierBehavior.Add)
-                    return IconUtility.GetIcon("Toolbar/Selection_ShiftAdd", IconSkin.Pro);
-                else if (modifier == SelectionModifierBehavior.Subtract)
-                    return IconUtility.GetIcon("Toolbar/Selection_ShiftSubtract", IconSkin.Pro);
-                else
-                    return IconUtility.GetIcon("Toolbar/Selection_ShiftDifference", IconSkin.Pro);
-            }
-        }
+        public override string iconPath => "Toolbar/Selection_ShiftDifference";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath, IconSkin.Pro);
 
-        public override TooltipContent tooltip
-        {
-            get { return _tooltip; }
-        }
+        public override TooltipContent tooltip => _tooltip;
 
-        public override int toolbarPriority
-        {
-            get { return 0; }
-        }
+        public override int toolbarPriority => 0;
 
         static readonly TooltipContent _tooltip = new TooltipContent
             (
                 "Set Drag Selection Mode",
-                @"When drag selecting elements, does the shift key
+                @"Obsolete, when drag selecting elements:
 
-- [Add] Always add to the selection
-- [Subtract] Always subtract from the selection
-- [Difference] Invert the selection by the selected faces (Default)
-");
+                - Use the Shift key to add elements to the selection
+                - Use the Ctrl/Cmd key to subtract elements from the selection"
+            );
+
+        public override bool enabled => false;
 
         public override SelectMode validSelectModes
         {
             get { return SelectMode.Vertex | SelectMode.Edge | SelectMode.Face | SelectMode.TextureFace; }
         }
 
-        public override string menuTitle
-        {
-            get { return string.Format("Shift: {0}", modifier); }
-        }
+        public override string menuTitle => "Shift: Obsolete";
 
         protected override ActionResult PerformActionImplementation()
         {
-            int mode = (int)modifier;
-            int len = System.Enum.GetValues(typeof(SelectionModifierBehavior)).Length;
-            modifier = (SelectionModifierBehavior)((mode + 1) % len);
-            return new ActionResult(ActionResult.Status.Success, "Set Shift Drag Mode\n" + modifier);
+            return new ActionResult(ActionResult.Status.NoChange, "Set Shift Drag Mode is obsolete");
         }
     }
 }

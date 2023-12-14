@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using UnityEngine.ProBuilder;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.ProBuilder
 {
@@ -10,10 +12,10 @@ namespace UnityEditor.ProBuilder
     {
         static UndoUtility()
         {
-            Undo.undoRedoPerformed += UndoRedoPerformed;
+            Undo.undoRedoEvent += UndoRedoEventCallback;
         }
 
-        static void UndoRedoPerformed()
+        static void UndoRedoEventCallback(in UndoRedoInfo info)
         {
             // material preview when dragging in scene-view is done by applying then undoing changes. we don't want to
             // rebuild the mesh every single frame when dragging.
@@ -21,9 +23,39 @@ namespace UnityEditor.ProBuilder
                 return;
 
             foreach(var mesh in Selection.GetFiltered<ProBuilderMesh>(SelectionMode.TopLevel))
-                EditorUtility.SynchronizeWithMeshFilter(mesh);
+                using (new ProBuilderMesh.NonVersionedEditScope(mesh))
+                    EditorUtility.SynchronizeWithMeshFilter(mesh);
 
             ProBuilderEditor.Refresh();
+        }
+
+        static int s_PreviewGroupIndex = -1;
+
+        internal static void StartPreview()
+        {
+            // Using this Undo method to remove the preview actions from the redo stack
+            // If a preview is already in use, reverting that one first before starting a new one
+            if (s_PreviewGroupIndex != -1)
+                Undo.RevertAllDownToGroup(s_PreviewGroupIndex);
+
+            s_PreviewGroupIndex = Undo.GetCurrentGroup();
+        }
+
+        internal static void UndoPreview()
+        {
+            if (s_PreviewGroupIndex != -1)
+            {
+                //Using this Undo method to remove the preview actions from the redo stack
+                Undo.RevertAllDownToGroup(s_PreviewGroupIndex);
+                s_PreviewGroupIndex = -1;
+            }
+            else
+                Undo.PerformUndo();
+        }
+
+        internal static void ExitAndValidatePreview()
+        {
+            s_PreviewGroupIndex = -1;
         }
 
         /**

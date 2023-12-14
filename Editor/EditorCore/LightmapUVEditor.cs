@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.ProBuilder;
 
@@ -74,11 +73,7 @@ namespace UnityEditor.ProBuilder
 
         static bool IsMissingLightmaps(ProBuilderMesh mesh)
         {
-#if UNITY_2019_2_OR_NEWER
             return mesh.gameObject.HasStaticFlag(StaticEditorFlags.ContributeGI) && !mesh.HasArrays(MeshArrays.Lightmap);
-#else
-            return mesh.gameObject.HasStaticFlag(StaticEditorFlags.LightmapStatic) && !mesh.HasArrays(MeshArrays.Lightmap);
-#endif
         }
 
         static List<ProBuilderMesh> FindMissingLightmaps()

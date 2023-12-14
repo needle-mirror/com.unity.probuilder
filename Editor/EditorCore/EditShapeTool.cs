@@ -5,22 +5,32 @@ using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.Shapes;
 using Math = UnityEngine.ProBuilder.Math;
 using Object = UnityEngine.Object;
-
 using FaceData = UnityEditor.ProBuilder.EditorShapeUtility.FaceData;
 using Plane = UnityEngine.ProBuilder.Shapes.Plane;
 using Sprite = UnityEngine.ProBuilder.Shapes.Sprite;
-
-#if !UNITY_2020_2_OR_NEWER
-using ToolManager = UnityEditor.EditorTools.EditorTools;
-#else
 using ToolManager = UnityEditor.EditorTools.ToolManager;
-#endif
 
 namespace UnityEditor.ProBuilder
 {
     [EditorTool("Edit Shape", typeof(ProBuilderShape))]
     sealed class EditShapeTool : EditorTool
     {
+        [MenuItem("Tools/ProBuilder/Edit/Edit Shape", true, PreferenceKeys.menuEditor + 10)]
+        static bool ValidateEditShapeTool()
+        {
+            foreach (var go in Selection.gameObjects)
+                if (go.TryGetComponent<ProBuilderShape>(out _)) return true;
+
+            return false;
+        }
+
+        [MenuItem("Tools/ProBuilder/Edit/Edit Shape", false, PreferenceKeys.menuEditor + 10)]
+        static void ActivateEditShapeTool()
+        {
+            ToolManager.SetActiveTool<EditShapeTool>();
+            ProBuilderAnalytics.SendActionEvent("Edit Shape Tool", nameof(EditShapeTool));
+        }
+
         Editor m_ShapeEditor;
 
         static readonly Color k_BoundsHandleColor = new Color(.2f, .4f, .8f, 1f);
@@ -51,6 +61,7 @@ namespace UnityEditor.ProBuilder
         //Size Handle management
         static Vector2 s_StartMousePosition;
         static Vector3 s_StartSize;
+        static Vector3 s_HandleStartPosition;
         static Vector3 s_StartPositionLocal;
         static Vector3 s_StartPositionGlobal;
         static Vector3 s_StartScale;
@@ -67,11 +78,24 @@ namespace UnityEditor.ProBuilder
         static float s_CurrentAngle = 0;
         static int s_CurrentArrowHovered = -1;
         static Quaternion s_ShapeRotation = Quaternion.identity;
-        static Vector3[][] s_ArrowsLines = new Vector3[4][];
+        static Vector3[][] s_ArrowsLines;
 
-#if UNITY_2021_1_OR_NEWER
+        static Vector3[][] arrowsLines
+        {
+            get
+            {
+                if(s_ArrowsLines == null)
+                {
+                    s_ArrowsLines = new Vector3[4][];
+                    for (int i = 0; i < s_ArrowsLines.Length; i++)
+                        s_ArrowsLines[i] = new Vector3[3];
+                }
+
+                return s_ArrowsLines;
+            }
+        }
+
         public override bool gridSnapEnabled => true;
-#endif
 
         static GUIContent s_IconContent;
         public override GUIContent toolbarIcon
@@ -83,7 +107,7 @@ namespace UnityEditor.ProBuilder
                     {
                         image = IconUtility.GetIcon("Tools/EditShape"),
                         text = "Edit Shape",
-                        tooltip = "Edit Shape"
+                        tooltip = "Edit ProBuilder Shape"
                     };
                 return s_IconContent;
             }
@@ -91,27 +115,12 @@ namespace UnityEditor.ProBuilder
 
         void OnEnable()
         {
-            m_OverlayTitle = new GUIContent("Edit Shape");
-            for(int i = 0; i < s_ArrowsLines.Length; i++)
-                s_ArrowsLines[i] = new Vector3[3];
-
+            m_OverlayTitle = new GUIContent("Shape Settings");
             m_ShapeEditor = Editor.CreateEditor(targets.ToArray(), typeof(ProBuilderShapeEditor));
-            EditorApplication.playModeStateChanged += PlaymodeStateChanged ;
-
-#if !UNITY_2020_2_OR_NEWER
-            ToolManager.activeToolChanging += ActiveToolChanging;
-            ProBuilderEditor.selectModeChanged += OnSelectModeChanged;
-#endif
         }
 
         void OnDisable()
         {
-#if !UNITY_2020_2_OR_NEWER
-            ToolManager.activeToolChanging -= ActiveToolChanging;
-            ProBuilderEditor.selectModeChanged -= OnSelectModeChanged;
-#endif
-            EditorApplication.playModeStateChanged -= PlaymodeStateChanged ;
-
             if(m_ShapeEditor != null)
                 DestroyImmediate(m_ShapeEditor);
         }
@@ -128,45 +137,31 @@ namespace UnityEditor.ProBuilder
             m_ShapeEditor = Editor.CreateEditor(targets.ToArray(), typeof(ProBuilderShapeEditor));
         }
 
-#if !UNITY_2020_2_OR_NEWER
-        void ActiveToolChanging()
-        {
-            if(ToolManager.IsActiveTool(this))
-                EditorApplication.delayCall += () => ChangeToObjectMode();
-        }
-
-        void ChangeToObjectMode()
-        {
-            if(ToolManager.IsActiveTool(this))
-                ProBuilderEditor.selectMode = SelectMode.Object;
-        }
-
-#else
         public override void OnActivated()
         {
             base.OnActivated();
+            EditorApplication.playModeStateChanged += PlaymodeStateChanged ;
             ProBuilderEditor.selectModeChanged += OnSelectModeChanged;
-            EditorApplication.delayCall += () => ProBuilderEditor.selectMode = SelectMode.Object;
+            ToolManager.activeContextChanged += OnActiveContextChanged;
         }
 
         public override void OnWillBeDeactivated()
         {
             base.OnWillBeDeactivated();
+            ToolManager.activeContextChanged -= OnActiveContextChanged;
             ProBuilderEditor.selectModeChanged -= OnSelectModeChanged;
-            EditorApplication.delayCall += () => ResetToLastSelectMode();
+            EditorApplication.playModeStateChanged -= PlaymodeStateChanged ;
         }
-
-        public void ResetToLastSelectMode()
-        {
-            if(ProBuilderToolManager.activeTool != Tool.Custom && ProBuilderToolManager.IsAnyProBuilderContextActive())
-                ProBuilderEditor.ResetToLastSelectMode();
-        }
-#endif
 
         void OnSelectModeChanged(SelectMode selectMode)
         {
-            if(ToolManager.IsActiveTool(this) && selectMode != SelectMode.Object)
+            if(ToolManager.IsActiveTool(this))
                 ToolManager.RestorePreviousTool();
+        }
+
+        void OnActiveContextChanged()
+        {
+            ToolManager.RestorePreviousPersistentTool();
         }
 
         public override void OnToolGUI(EditorWindow window)
@@ -193,29 +188,10 @@ namespace UnityEditor.ProBuilder
 
         void OnOverlayGUI(Object obj, SceneView view)
         {
-#if !UNITY_2021_1_OR_NEWER
-            var snapDisabled = Tools.pivotRotation != PivotRotation.Global;
-            using(new EditorGUI.DisabledScope(snapDisabled))
-            {
-                if(snapDisabled)
-                    EditorGUILayout.Toggle("Snapping (only Global)", false);
-                else
-                    EditorSnapSettings.gridSnapEnabled = EditorGUILayout.Toggle("Grid Snapping", EditorSnapSettings.gridSnapEnabled);
-            }
-#endif
-
-#if UNITY_2021_2_OR_NEWER
             GUILayout.BeginVertical(GUILayout.MinWidth(DrawShapeTool.k_MinOverlayWidth));
-            ( (ProBuilderShapeEditor) m_ShapeEditor ).DrawShapeGUI(null);
+            ( (ProBuilderShapeEditor) m_ShapeEditor ).DrawShapeGUI();
             ( (ProBuilderShapeEditor) m_ShapeEditor ).DrawShapeParametersGUI(null);
             GUILayout.EndVertical();
-#else
-            using(new EditorGUILayout.VerticalScope(new GUIStyle(EditorStyles.frameBox)))
-            {
-                ( (ProBuilderShapeEditor) m_ShapeEditor ).DrawShapeGUI(null);
-                ( (ProBuilderShapeEditor) m_ShapeEditor ).DrawShapeParametersGUI(null);
-            }
-#endif
         }
 
         /// <summary>
@@ -224,20 +200,16 @@ namespace UnityEditor.ProBuilder
         /// these handles allow to modified the last created shape.
         /// </summary>
         /// <param name="proBuilderShape">The Shape on which to attach the handles</param>
-        /// <param name="updatePrefs">Parameter used to update the DrawShapeTool when needed</param>
-        internal static void DoEditingHandles(ProBuilderShape proBuilderShape, bool updatePrefs = false)
+        internal static void DoEditingHandles(ProBuilderShape proBuilderShape, DrawShapeTool tool = null)
         {
             if(proBuilderShape == null)
                 return;
 
-            var scale = proBuilderShape.transform.lossyScale;
-            var position = proBuilderShape.transform.position
-                           + Vector3.Scale(proBuilderShape.transform.TransformDirection(proBuilderShape.shapeBox.center),scale);
-            var matrix = Matrix4x4.TRS(position, proBuilderShape.transform.rotation, Vector3.one);
+            var matrix = Matrix4x4.TRS(proBuilderShape.shapeWorldCenter, proBuilderShape.transform.rotation, Vector3.one);
 
             using (new Handles.DrawingScope(matrix))
             {
-                EditorShapeUtility.UpdateFaces(proBuilderShape.editionBounds, scale, faces);
+                EditorShapeUtility.UpdateFaces(proBuilderShape.editionBounds, proBuilderShape.transform.lossyScale, faces);
 
                 for(int i = 0; i <4; ++i)
                     k_OrientationControlIDs[i] = GUIUtility.GetControlID(FocusType.Passive);
@@ -246,13 +218,13 @@ namespace UnityEditor.ProBuilder
 
                 var absSize = Math.Abs(proBuilderShape.editionBounds.size);
                 if(absSize.x > Mathf.Epsilon && absSize.y > Mathf.Epsilon && absSize.z > Mathf.Epsilon )
-                    DoOrientationHandles(proBuilderShape, updatePrefs);
+                    DoOrientationHandles(proBuilderShape, tool);
 
-                DoSizeHandles(proBuilderShape, updatePrefs);
+                DoSizeHandles(proBuilderShape, tool);
             }
         }
 
-        static void DoSizeHandles(ProBuilderShape proBuilderShape, bool updatePrefs)
+        static void DoSizeHandles(ProBuilderShape proBuilderShape, DrawShapeTool tool = null)
         {
             int faceCount = s_Faces.Length;
 
@@ -277,16 +249,16 @@ namespace UnityEditor.ProBuilder
                     }
                 }
 
-                if( DoFaceSizeHandle(face, s_FaceControlIDs[i]) )
+                if( DoFaceSizeHandle(proBuilderShape.transform, face, s_FaceControlIDs[i]) )
                 {
 
                     if(!s_SizeManipulationInit)
                     {
-                        var offset = proBuilderShape.transform.TransformVector(proBuilderShape.shapeBox.center);
-                        s_StartCenter = proBuilderShape.transform.position + offset;
+                        s_StartCenter = proBuilderShape.shapeWorldCenter;
                         s_StartScale = proBuilderShape.transform.lossyScale;
                         s_StartScaleInverse = new Vector3(1f / Mathf.Abs(s_StartScale.x), 1f/Mathf.Abs(s_StartScale.y), 1f/Mathf.Abs(s_StartScale.z));
-                        s_StartPositionLocal = face.CenterPosition + Vector3.Scale(offset, s_StartScale);
+                        s_HandleStartPosition = face.CenterPosition;
+                        s_StartPositionLocal = proBuilderShape.shapeLocalBounds.center + face.CenterPosition;
                         s_StartPositionGlobal = proBuilderShape.transform.TransformPoint(s_StartPositionLocal);
                         s_StartSize = proBuilderShape.size;
                         s_SizeManipulationInit = true;
@@ -320,7 +292,7 @@ namespace UnityEditor.ProBuilder
                         //scale by the object scale factor
                         delta.Scale(s_StartScaleInverse);
 
-                        targetSize = ProBuilderSnapping.Snap(targetSize + delta, snapValue);
+                        targetSize += ProBuilderSnapping.Snap(delta, snapValue);
                     }
 
                     var center = Vector3.zero;
@@ -332,13 +304,13 @@ namespace UnityEditor.ProBuilder
                     }
                     ApplyProperties(proBuilderShape, s_StartCenter + center, targetSize);
 
-                    if(updatePrefs)
-                        DrawShapeTool.SaveShapeParams(proBuilderShape);
+                    if(tool != null)
+                        tool.SaveShapeParams(proBuilderShape);
                 }
             }
         }
 
-        static bool DoFaceSizeHandle(FaceData face, int controlID)
+        static bool DoFaceSizeHandle(Transform trs, FaceData face, int controlID)
         {
             if( k_OrientationControlIDs.Contains(HandleUtility.nearestControl) && !EditorShapeUtility.PointerIsInFace(face) )
                 return false;
@@ -381,7 +353,8 @@ namespace UnityEditor.ProBuilder
                 case EventType.MouseDrag:
                     if(s_CurrentId == controlID)
                     {
-                        s_SizeDelta = HandleUtility.CalcLineTranslation(s_StartMousePosition, evt.mousePosition, s_StartPositionLocal, face.Normal);
+                        using(new Handles.DrawingScope(Matrix4x4.identity))
+                            s_SizeDelta = HandleUtility.CalcLineTranslation(s_StartMousePosition, evt.mousePosition, s_StartPositionGlobal, trs.TransformDirection(face.Normal).normalized);
                         return true;
                     }
                     break;
@@ -389,7 +362,7 @@ namespace UnityEditor.ProBuilder
             return false;
         }
 
-        static void DoOrientationHandles(ProBuilderShape proBuilderShape, bool updatePrefs)
+        static void DoOrientationHandles(ProBuilderShape proBuilderShape, DrawShapeTool tool)
         {
             if( GUIUtility.hotControl != 0 && !k_OrientationControlIDs.Contains(GUIUtility.hotControl) )
                 return;
@@ -405,8 +378,8 @@ namespace UnityEditor.ProBuilder
 
                         ProBuilderEditor.Refresh();
 
-                        if(updatePrefs)
-                            DrawShapeTool.SaveShapeParams(proBuilderShape);
+                        if(tool != null)
+                            tool.SaveShapeParams(proBuilderShape);
                     }
                 }
             }
@@ -441,7 +414,7 @@ namespace UnityEditor.ProBuilder
                             {
                                 if(k_OrientationControlIDs[i] == s_CurrentId)
                                 {
-                                    targetedNormal = (s_ArrowsLines[i][1] - face.CenterPosition).normalized;
+                                    targetedNormal = (arrowsLines[i][1] - face.CenterPosition).normalized;
                                     break;
                                 }
                             }
@@ -462,7 +435,7 @@ namespace UnityEditor.ProBuilder
                     case EventType.Layout:
                         for(int i = 0; i < 4; i++)
                         {
-                            var rectPos = 0.8f * s_ArrowsLines[i][1] + 0.2f * face.CenterPosition;
+                            var rectPos = 0.8f * arrowsLines[i][1] + 0.2f * face.CenterPosition;
                             float dist = HandleUtility.DistanceToRectangle( rectPos,
                                 Quaternion.LookRotation(face.Normal),
                                 HandleUtility.GetHandleSize(face.CenterPosition) * s_DefaultMidpointSquareSize/2f);
@@ -487,9 +460,9 @@ namespace UnityEditor.ProBuilder
                            var A = topDirection.magnitude;
                            var a = 0.33f * Mathf.Sqrt(2f * A * A);
                            var h = 0.5f * Mathf.Sqrt(2f * a * a);
-                           s_ArrowsLines[i][0] = top - ( h * arrowDirection + h * sideDirection );
-                           s_ArrowsLines[i][1] = top;
-                           s_ArrowsLines[i][2] = top - ( h * arrowDirection - h * sideDirection );
+                           arrowsLines[i][0] = top - ( h * arrowDirection + h * sideDirection );
+                           arrowsLines[i][1] = top;
+                           arrowsLines[i][2] = top - ( h * arrowDirection - h * sideDirection );
 
                            bool selected = HandleUtility.nearestControl == k_OrientationControlIDs[i];
 
@@ -500,7 +473,7 @@ namespace UnityEditor.ProBuilder
 
                            using(new Handles.DrawingScope(color))
                            {
-                               Handles.DrawAAPolyLine(5f, s_ArrowsLines[i]);
+                               Handles.DrawAAPolyLine(5f, arrowsLines[i]);
                                if(selected)
                                {
                                    EditorGUIUtility.AddCursorRect(new Rect(0,0,Screen.width, Screen.height), MouseCursor.RotateArrow);
@@ -508,9 +481,9 @@ namespace UnityEditor.ProBuilder
                                    Handles.DrawAAPolyLine(3f,
                                        new Vector3[]
                                        {
-                                           Vector3.Scale(proBuilderShape.rotation * Vector3.up, proBuilderShape.size / 2f),
+                                           Vector3.Scale(proBuilderShape.shapeRotation * Vector3.up, proBuilderShape.size / 2f),
                                            Vector3.zero,
-                                           Vector3.Scale(proBuilderShape.rotation * Vector3.forward, proBuilderShape.size / 2f)
+                                           Vector3.Scale(proBuilderShape.shapeRotation * Vector3.forward, proBuilderShape.size / 2f)
                                        });
                                }
                            }

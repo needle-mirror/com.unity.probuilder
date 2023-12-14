@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.UIElements;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
 
@@ -11,14 +12,15 @@ namespace UnityEditor.ProBuilder.Actions
         Pref<float> m_BevelSize = new Pref<float>("BevelEdges.size", .2f);
 
         public override ToolbarGroup group { get { return ToolbarGroup.Geometry; } }
-        public override Texture2D icon { get { return IconUtility.GetIcon("Toolbar/Edge_Bevel", IconSkin.Pro); } }
+        public override string iconPath => "Toolbar/Edge_Bevel";
+        public override Texture2D icon => IconUtility.GetIcon(iconPath);
         public override TooltipContent tooltip { get { return s_Tooltip; } }
 
-        static readonly GUIContent gc_BevelDistance = EditorGUIUtility.TrTextContent("Distance", "The size of the bevel in meters.");
+        static readonly GUIContent gc_BevelDistance = EditorGUIUtility.TrTextContent("Distance", "The size of the bevel in meters. The value is clamped to the size of the smallest affected face.");
 
         static readonly TooltipContent s_Tooltip = new TooltipContent
             (
-                "Bevel",
+                "Bevel Edges",
                 @"Smooth the selected edges by adding a slanted face connecting the two adjacent faces."
             );
 
@@ -35,6 +37,33 @@ namespace UnityEditor.ProBuilder.Actions
         protected override MenuActionState optionsMenuState
         {
             get { return MenuActionState.VisibleAndEnabled; }
+        }
+
+        public override VisualElement CreateSettingsContent()
+        {
+            var root = new VisualElement();
+
+            var floatField = new FloatField(gc_BevelDistance.text);
+            floatField.tooltip = gc_BevelDistance.tooltip;
+            floatField.isDelayed = PreviewActionManager.delayedPreview;
+            floatField.SetValueWithoutNotify(m_BevelSize.value);
+            floatField.RegisterCallback<ChangeEvent<float>>(evt =>
+            {
+                if (m_BevelSize.value != evt.newValue)
+                {
+                    if (evt.newValue < k_MinBevelDistance)
+                    {
+                        m_BevelSize.SetValue(k_MinBevelDistance);
+                        floatField.SetValueWithoutNotify(m_BevelSize);
+                    }
+                    else
+                        m_BevelSize.SetValue(evt.newValue);
+                    PreviewActionManager.UpdatePreview();
+                }
+            });
+            root.Add(floatField);
+
+            return root;
         }
 
         protected override void OnSettingsGUI()

@@ -5,18 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [5.2.2] - 2023-11-27
+## [6.0.1-pre.1] - 2023-12-14
 
-### Fixed
+### Changes
 
-- [PB-88] Fixed a bug that prevented the ProBuilder window to update its content after changing its docking position.
+- Updated context menu to use the new API for Unity 2023.3.
+- Improved the action preview UX.
 
-## [5.2.1] - 2023-11-06
+## [6.0.0] - 2023-11-27
 
-### Fixed
+### Changes
 
-- Fixed a bug that prevented editing meshes or enabling view tools after the new shortcut improvements were added to the Editor.
-
+- Deprecated all the code paths for Unity version previous to 2023.3 and previous code to upgrade projects.
+- Removed the ProBuilder editor window dependency.
+- Created a ProBuilder context and moving vertex, edge and face edit modes to the tool settings overlay.
+- Moved creation and edition tools to the main toolbar. 
+- Added ProBuilder actions to the Scene view context menu and overlays.
+- Added a preview option for most of the ProBuilder actions.
+  
 ## [5.2.0] - 2023-10-02
 
 ### Fixed
@@ -39,6 +45,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed an exception in `CombineMeshes.AccumulateMeshesInfo` when a `ProBuilderMesh` contains an empty `Material` array.
 - [case: PBLD-78] Fixed a regression where it was no longer possible to set the extrusion point with the Poly Shape tool.
 - [case: UUM-43960] Fixed warning on project import caused by merge conflicts in a meta file.
+
 
 ## [5.1.0] - 2023-06-01
 
