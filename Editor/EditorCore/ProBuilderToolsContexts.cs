@@ -20,8 +20,17 @@ namespace UnityEditor.ProBuilder
     [EditorToolContext("ProBuilder", typeof(ProBuilderMesh))]
     class PositionToolContext : EditorToolContext
     {
+        internal class ProBuilderShortcutContext : IShortcutContext
+        {
+            public bool active
+                => EditorWindow.focusedWindow is SceneView
+                   && ProBuilderEditor.instance != null;
+        }
+
         ProBuilderEditor m_Editor;
         ProBuilderEditor editor => m_Editor ??= new ProBuilderEditor();
+
+        ProBuilderShortcutContext m_ShortcutContext;
 
         protected override Type GetEditorToolType(Tool tool)
         {
@@ -56,7 +65,6 @@ namespace UnityEditor.ProBuilder
 
             typeof(Actions.ToggleSelectBackFaces),
             typeof(Actions.ToggleHandleOrientation),
-            typeof(Actions.ToggleDragSelectionMode),
             typeof(Actions.ToggleDragRectMode),
             typeof(Actions.ToggleXRay)
         };
@@ -126,11 +134,13 @@ namespace UnityEditor.ProBuilder
         public override void OnActivated()
         {
             m_Editor = new ProBuilderEditor();
+            ShortcutManager.RegisterContext(m_ShortcutContext ??= new ProBuilderShortcutContext());
         }
 
         public override void OnWillBeDeactivated()
         {
             m_Editor.Dispose();
+            ShortcutManager.UnregisterContext(m_ShortcutContext);
         }
 
         public override void OnToolGUI(EditorWindow window)

@@ -398,8 +398,6 @@ namespace UnityEditor.ProBuilder
 
         // Shape's duplicate
         internal GameObject m_DuplicateGO = null;
-        Material m_ShapePreviewMaterial;
-        static readonly Color k_PreviewColor = new Color(.5f, .9f, 1f, .56f);
 
         //Shape's properties
         internal bool m_IsOnGrid;
@@ -471,10 +469,10 @@ namespace UnityEditor.ProBuilder
         {
             get
             {
-                if(m_CurrentState is ShapeState_InitShape  && m_LastShapeCreated != null)
+                if (m_CurrentState is ShapeState_InitShape  && m_LastShapeCreated != null)
                     return m_LastShapeCreated;
 
-                if(m_CurrentState is ShapeState_DrawBaseShape && m_DuplicateGO != null)
+                if (m_CurrentState is ShapeState_DrawBaseShape && m_DuplicateGO != null)
                     return m_DuplicateGO.GetComponent<ProBuilderShape>();
 
                 return proBuilderShape;
@@ -485,7 +483,7 @@ namespace UnityEditor.ProBuilder
         {
             get
             {
-                if(m_ProBuilderShape == null)
+                if (m_ProBuilderShape == null)
                 {
                     m_ProBuilderShape = new GameObject("Shape", typeof(ProBuilderShape)).GetComponent<ProBuilderShape>();
                     m_ProBuilderShape.gameObject.hideFlags = HideFlags.HideAndDontSave;
@@ -501,23 +499,9 @@ namespace UnityEditor.ProBuilder
         static DrawShapeTool s_Instance = null;
         internal static DrawShapeTool instance => s_Instance;
 
-        void OnEnable()
-        {
-            m_CurrentState = InitStateMachine();
-
-            m_ShapePreviewMaterial = new Material(BuiltinMaterials.defaultMaterial.shader);
-            m_ShapePreviewMaterial.hideFlags = HideFlags.HideAndDontSave;
-
-            if (m_ShapePreviewMaterial.HasProperty("_MainTex"))
-                m_ShapePreviewMaterial.mainTexture = (Texture2D)Resources.Load("Textures/GridBox_Default");
-
-            if (m_ShapePreviewMaterial.HasProperty("_Color"))
-                m_ShapePreviewMaterial.SetColor("_Color", k_PreviewColor);
-        }
-
         void OnDisable()
         {
-            if(m_ShapeEditor != null)
+            if (m_ShapeEditor != null)
                 DestroyImmediate(m_ShapeEditor);
         }
 
@@ -533,7 +517,11 @@ namespace UnityEditor.ProBuilder
             ToolManager.activeContextChanged += OnActiveContextChanged;
             ProBuilderEditor.selectModeChanged += OnSelectModeChanged;
 
-            m_CurrentState = ShapeState.ResetTool(this);
+            if (m_CurrentState == null)
+                m_CurrentState = InitStateMachine();
+            else
+                m_CurrentState = ShapeState.ResetTool(this);
+
             s_Instance = this;
         }
 
@@ -547,14 +535,8 @@ namespace UnityEditor.ProBuilder
             ToolManager.activeContextChanged -= OnActiveContextChanged;
             ProBuilderEditor.selectModeChanged -= OnSelectModeChanged;
 
-            if(m_ProBuilderShape != null && !( m_CurrentState is ShapeState_InitShape ))
+            if (m_ProBuilderShape != null && !( m_CurrentState is ShapeState_InitShape ))
                 m_CurrentState = ShapeState.ResetState();
-        }
-
-        void OnDestroy()
-        {
-            if(m_ShapePreviewMaterial)
-                DestroyImmediate(m_ShapePreviewMaterial);
         }
 
         void OnSelectModeChanged(SelectMode mode)
@@ -687,7 +669,7 @@ namespace UnityEditor.ProBuilder
                 m_DuplicateGO = shape.gameObject;
                 m_DuplicateGO.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
                 ApplyPrefsSettings(shape);
-                shape.GetComponent<MeshRenderer>().sharedMaterial = m_ShapePreviewMaterial;
+                shape.GetComponent<MeshRenderer>().sharedMaterial = BuiltinMaterials.ShapePreviewMaterial;
 
                 EditorShapeUtility.CopyLastParams(shape.shape, shape.shape.GetType());
                 shape.Rebuild(m_Bounds, m_PlaneRotation);
@@ -762,6 +744,10 @@ namespace UnityEditor.ProBuilder
 
         public override void OnToolGUI(EditorWindow window)
         {
+            //A current problem on EditorTools with MacOS seems to be calling OnToolGUI before OnActivated after a domain reload.
+            if(s_Instance == null)
+                return;
+
             // todo refactor overlays to use `Overlay` class
 #pragma warning disable 618
             SceneViewOverlay.Window(k_ShapeTitle, OnOverlayGUI, 0, SceneViewOverlay.WindowDisplayOption.OneWindowPerTitle);
