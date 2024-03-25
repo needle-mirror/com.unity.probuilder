@@ -1,8 +1,8 @@
 {
   "name": "com.unity.probuilder",
   "displayName": "ProBuilder",
-  "version": "6.0.1-pre.2",
-  "unity": "2023.3",
+  "version": "6.0.1",
+  "unity": "6000.0",
   "description": "Build, edit, and texture custom geometry in Unity. Use ProBuilder for in-scene level design, prototyping, collision meshes, all with on-the-fly play-testing.\n\nAdvanced features include UV editing, vertex colors, parametric shapes, and texture blending. With ProBuilder's model export feature it's easy to tweak your levels in any external 3D modelling suite.",
   "keywords": [
     "3d",
@@ -45,18 +45,18 @@
     "com.unity.modules.imgui": "1.0.0"
   },
   "relatedPackages": {
-    "com.unity.probuilder.tests": "6.0.1-pre.2"
+    "com.unity.probuilder.tests": "6.0.1"
   },
   "_upm": {
-    "changelog": "### Fixed\n\n- [PBLD-108] Fixed a bug where triggering a ProBuilder shortcut outside of the ProBuilder context would throw an error.\n- [PBLD-103] Fixed a bug where creating a PolyShape, then immediately deleting it would create a new GameObject.\n- [PBLD-102] Fixed a bug where some materials assets were unexpectedly altered and rebuilt. \n- [PBLD-99] Removed ProBuilder shortcut that conflicted with default shortcuts in the Editor.\n- [PBLD-98] Fixed a bug where the cut tool cursor appeared on top of overlays.\n- [PBLD-95] Fixed several errors messages that spammed the console when a package was imported.\n- [PBLD-93] Fixed a bug where activating the PolyShape tool with a docked inspector would throw errors.\n- Fixed a bug where creating a PolyShape mesh was not properly finalizing the mesh creation. \n- Fixed a bug where assigning a material from the Material Editor was not working in GameObject mode.\n \n### Changes\n\n- Removed tools icons as they are not used in ProBuilder 6 Context Menu.\n- Unifying shaders and simplify code for the different render pipelines.\n- Unified shaders and simplify code for the different render pipelines.\n- Removed the Edit Mesh button from ProBuilderMesh Inspector.\n- Added a close loop feedback with PolyShape tool and improved the handles.\n- Improved tooltips for adding and removing vertices with the PolyShape tool.\n- Material editor: Changed the Quick material shortcut to **Ctrl+Shift+Mouse2**, and add this new shortcut to the Shortcut Manager.\n- Material editor: Improved the 'Match selection' button position to make it more self-explanatory.\n- Smooth Group editor: Updated the number of smoothing groups to 30.\n- Vertex Position Editor: Slightly moved the Vertex IDs labels positions to make then more readable in the Scene View.\n- Vertex Position Editor: Improved the World/Model Space button. \n- Interaction tool states are now shown in the main menu."
+    "changelog": "### Changes\n\n- Moved package out of preview."
   },
   "upmCi": {
-    "footprint": "9edfa745d64eed513c660322695911f09cd16ea9"
+    "footprint": "581f8c26cb351db84e0242a7d482d8ad7eae4f38"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.probuilder@6.0/manual/index.html",
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.probuilder.git",
     "type": "git",
-    "revision": "8f9a50a0f59ce258bfee806b5152ba6de60e0904"
+    "revision": "c9f1ad44225fbe6f18e4e759ae5a2d177ffa89ca"
   }
 }
