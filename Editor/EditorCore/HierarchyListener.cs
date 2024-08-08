@@ -87,7 +87,7 @@ namespace UnityEditor.ProBuilder
                 mesh.nonSerializedVersionIndex == ProBuilderMesh.k_UnitializedVersionIndex)
             {
                 mesh.MakeUnique();
-                Undo.RegisterCreatedObjectUndo(mesh.mesh, "Paste ProBuilderMesh");
+                Undo.RegisterCompleteObjectUndo( mesh.gameObject, "Paste ProBuilderMesh");
                 mesh.Optimize();
             }
         }
@@ -123,6 +123,8 @@ namespace UnityEditor.ProBuilder
             foreach (var mesh in go.GetComponentsInChildren<ProBuilderMesh>())
             {
                 EditorUtility.SynchronizeWithMeshFilter(mesh);
+                mesh.Rebuild();
+                mesh.Optimize();
             }
 
             ProBuilderEditor.Refresh();

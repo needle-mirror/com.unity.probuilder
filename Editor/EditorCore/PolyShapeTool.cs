@@ -19,7 +19,9 @@ namespace UnityEditor.ProBuilder
     [Icon("Packages/com.unity.probuilder/Content/Icons/Toolbar/CreatePolyShape.png")]
     public class DrawPolyShapeTool : PolyShapeTool
     {
-        [MenuItem(EditorToolbarMenuItem.k_MenuPrefix + "Editors/New PolyShape", false, PreferenceKeys.menuEditor + 1)]
+        GameObject m_LastPolyShape = null;
+
+        [MenuItem(EditorToolbarMenuItem.k_MenuPrefix + "Editors/Create PolyShape", false, PreferenceKeys.menuEditor + 1)]
         static void MenuPerform_NewShape()
         {
             ToolManager.SetActiveTool<DrawPolyShapeTool>();
@@ -30,15 +32,17 @@ namespace UnityEditor.ProBuilder
 
         public override void OnActivated()
         {
+            m_LastPolyShape = null;
             MeshSelection.SetSelection((GameObject)null);
             ToolManager.SetActiveContext<GameObjectToolContext>();
-
             base.OnActivated();
         }
 
         public override void OnWillBeDeactivated()
         {
             m_PolyShape = null;
+            if (m_LastPolyShape)
+                Selection.activeObject = m_LastPolyShape;
             base.OnWillBeDeactivated();
         }
 
@@ -62,6 +66,8 @@ namespace UnityEditor.ProBuilder
                     UndoUtility.RecordObject(polygon, "Set Height");
 
                     SetPolyEditMode(PolyShape.PolyEditMode.None);
+                    polygon.gameObject.hideFlags = HideFlags.None;
+                    m_LastPolyShape = polygon.gameObject;
                     polygon = null;
 
                     if (!TryCreatePolyShape())
@@ -77,13 +83,14 @@ namespace UnityEditor.ProBuilder
 
         protected override void OnObjectSelectionChanged()
         {
-            if(polygon == null)
+            if(Selection.activeObject != null && polygon == null)
             {
                 ToolManager.RestorePreviousTool();
                 return;
             }
 
-            if((Selection.activeObject is GameObject go && go == polygon.gameObject))
+            if((Selection.activeObject == null && polygon == null) ||
+               (Selection.activeObject is GameObject go && go == polygon.gameObject))
                 return;
 
             if(polygon != null && polygon.polyEditMode == PolyShape.PolyEditMode.Path)
@@ -102,6 +109,7 @@ namespace UnityEditor.ProBuilder
             if (newPolyshape)
             {
                 GameObject go = new GameObject("PolyShape");
+                go.hideFlags = HideFlags.HideAndDontSave | HideFlags.HideInInspector;
                 UndoUtility.RegisterCreatedObjectUndo(go, "Create Poly Shape");
                 m_PolyShape = Undo.AddComponent<PolyShape>(go);
                 ProBuilderMesh pb = Undo.AddComponent<ProBuilderMesh>(go);
@@ -137,7 +145,7 @@ namespace UnityEditor.ProBuilder
             {
                 if (UnityEditor.EditorUtility.DisplayDialog(
                         L10n.Tr("Inspector Locked"),
-                        L10n.Tr("To create new Poly Shape you need access to all Inspectors, which are currently locked. Do you wish to unlock all Inpsectors?"),
+                        L10n.Tr("To create a new Poly Shape you need access to all Inspectors, which are currently locked. Do you wish to unlock all Inspectors?"),
                         L10n.Tr("Unlock"),
                         L10n.Tr("Cancel")))
                 {
@@ -525,6 +533,11 @@ namespace UnityEditor.ProBuilder
 
             if (polygon.polyEditMode != PolyShape.PolyEditMode.Path)
             {
+                // PBLD-137 - continously refresh the material, otherwise if Resident Drawer is on, new faces are drawn without material applied until there's some other trigger:
+                // renderer enable/disable, material re-apply, etc.
+                if (polygon.polyEditMode == PolyShape.PolyEditMode.Height && polygon.m_Points != null && polygon.m_Points.Count >= 3)
+                    polygon.mesh.renderer.sharedMaterial = EditorMaterialUtility.GetUserMaterial();
+                
                 var result = polygon.CreateShapeFromPolygon();
                 if(result.status == ActionResult.Status.Failure)
                 {
