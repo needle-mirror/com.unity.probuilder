@@ -1,7 +1,7 @@
 {
   "name": "com.unity.probuilder",
   "displayName": "ProBuilder",
-  "version": "5.2.2",
+  "version": "5.2.3",
   "unity": "2019.4",
   "description": "Build, edit, and texture custom geometry in Unity. Use ProBuilder for in-scene level design, prototyping, collision meshes, all with on-the-fly play-testing.\n\nAdvanced features include UV editing, vertex colors, parametric shapes, and texture blending. With ProBuilder's model export feature it's easy to tweak your levels in any external 3D modelling suite.\n\nIf you are using URP/HDRP, be careful to also import the corresponding sample project in the section below to get the proper materials.",
   "keywords": [
@@ -54,18 +54,18 @@
     "com.unity.modules.imgui": "1.0.0"
   },
   "relatedPackages": {
-    "com.unity.probuilder.tests": "5.2.2"
+    "com.unity.probuilder.tests": "5.2.3"
   },
   "_upm": {
-    "changelog": "### Fixed\n\n- [PB-88] Fixed a bug that prevented the ProBuilder window to update its content after changing its docking position."
+    "changelog": "### Added\n\n- [PBLD-146] Added corrected SRP Standard Vertex Color sample shader for 2020.X editors and above.\n\n### Fixed\n\n- [PBLD-138] Fixed a bug where duplicating a ProBuilder mesh would mark all scenes as dirty.\n- [PBLD-134] Fixed a bug where drawing ProBuilder shapes would cause temporary visual glitches on macOS.\n- [PBLD-127] Fixed a bug where undoing a shape creation would reset the deleted shape in the scene.\n- [PBLD-110] Fixed a bug where the prefab instances of ProBuilder meshes where not updating after applying all the overrides.\n- [WEBDOCS-1036] Fixed a documentation generation problem where a setting in the filter.yml file was preventing the ProBuilder API documentation from being generated."
   },
   "upmCi": {
-    "footprint": "e6d9eb546c8cab68676fac49f980f98ff545146a"
+    "footprint": "8ebbd968d0721e3ad28b8c1d61d1a84c70416683"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.probuilder@5.2/manual/index.html",
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.probuilder.git",
     "type": "git",
-    "revision": "d1aaa03087398cf9477de8e6cfbfb66b180ab71d"
+    "revision": "4dfe5d0a97cdea307668dae116b2b69982507cc1"
   }
 }

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.2.3] - 2024-08-12
+
+### Added
+
+- [PBLD-146] Added corrected SRP Standard Vertex Color sample shader for 2020.X editors and above.
+
+### Fixed
+
+- [PBLD-138] Fixed a bug where duplicating a ProBuilder mesh would mark all scenes as dirty.
+- [PBLD-134] Fixed a bug where drawing ProBuilder shapes would cause temporary visual glitches on macOS.
+- [PBLD-127] Fixed a bug where undoing a shape creation would reset the deleted shape in the scene.
+- [PBLD-110] Fixed a bug where the prefab instances of ProBuilder meshes where not updating after applying all the overrides.
+- [WEBDOCS-1036] Fixed a documentation generation problem where a setting in the filter.yml file was preventing the ProBuilder API documentation from being generated.
+
 ## [5.2.2] - 2023-11-27
 
 ### Fixed
