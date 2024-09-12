@@ -1,7 +1,7 @@
 {
   "name": "com.unity.probuilder",
   "displayName": "ProBuilder",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "unity": "6000.0",
   "description": "Build, edit, and texture custom geometry in Unity. Use ProBuilder for in-scene level design, prototyping, collision meshes, all with on-the-fly play-testing.\n\nAdvanced features include UV editing, vertex colors, parametric shapes, and texture blending. With ProBuilder's model export feature it's easy to tweak your levels in any external 3D modelling suite.",
   "keywords": [
@@ -45,18 +45,18 @@
     "com.unity.modules.imgui": "1.0.0"
   },
   "relatedPackages": {
-    "com.unity.probuilder.tests": "6.0.3"
+    "com.unity.probuilder.tests": "6.0.4"
   },
   "_upm": {
-    "changelog": "### Fixed\n\n- [PBLD-159] Fixed an issue where a ProBuilder menu item shortcut would conflict with Editor's built-in shortcut.\n- [PBLD-158] Fixed a bug where ProBuilder would prevent classes inheriting from `UnityEditor.Editor` to compile.\n- [PBLD-151] Fixed a bug where the Action Settings overlay would not be displayed when used the first time.\n- [PBLD-141] Fixed a bug where the selection would be incorrect when entering PrefabStage.\n- [PBLD-142] Fixed a bug where it was possible to trigger the probuilderize action twice on the same object.\n- [PBLD-150] Fixed a bug where the orientation handles would not be useful when manipulating a cube shape.\n- [PBLD-149] Fixed a bug where the ProBuilder edit modes toggle could be disabled.\n- [PBLD-145] Fixed a bug where using the preview shape with HDRP would crash the editor.\n- Fixed a bug where moving the preview shape was not ignoring the preview shape to compute the correct placement.\n\n### Added\n\n- [PBLD-152] Added some relevant Unity selection actions in the ProBuilder contextual menu."
+    "changelog": "### Changes\n\n- [PBLD-169] \"Edit Vertices/Edges/Faces\" shortcuts now automatically enter the ProBuilder context.\n- [PBLD-167] Removed \"Toggle ProBuilder Context\" shortcut - the built-in \"Cycle Tool Modes\" shortcut should be used instead."
   },
   "upmCi": {
-    "footprint": "2062861b7f77620900ac6be05a1d141c103e900d"
+    "footprint": "4f9dacb6f348734811ac948ac0ec012d09adac66"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.probuilder@6.0/manual/index.html",
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.probuilder.git",
     "type": "git",
-    "revision": "b0a2e1226e0c1f11020f70346db6849f6cc78233"
+    "revision": "ec91db85925cba22a53ee72999806d964005e7df"
   }
 }
