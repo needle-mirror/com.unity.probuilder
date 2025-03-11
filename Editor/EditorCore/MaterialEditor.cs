@@ -6,6 +6,7 @@ using System.Linq;
 using UnityEditor.ShortcutManagement;
 using UnityEngine.ProBuilder;
 using UnityEngine.ProBuilder.MeshOperations;
+using System;
 
 namespace UnityEditor.ProBuilder
 {
@@ -14,6 +15,14 @@ namespace UnityEditor.ProBuilder
     /// </summary>
     sealed class MaterialEditor : ConfigurableWindow
     {
+        class MaterialShortcutContext : IShortcutContext
+        {
+            public bool active
+                => EditorWindow.focusedWindow is SceneView
+                   && instance != null && MeshSelection.selectedObjectCount > 0
+                   && instance.m_QueuedMaterial.value != null;
+        }
+
         // Reference to pb_Editor instance.
         static ProBuilderEditor editor { get { return ProBuilderEditor.instance; } }
 
@@ -21,14 +30,21 @@ namespace UnityEditor.ProBuilder
         public static MaterialEditor instance { get; private set; }
 
         const string k_QuickMaterialPath = "Tools/" + PreferenceKeys.pluginTitle + "/Materials/Apply Quick Material";
-        [MenuItem(k_QuickMaterialPath+" %#M2", true, PreferenceKeys.menuMaterialColors)]
+
+        [MenuItem(k_QuickMaterialPath, true, PreferenceKeys.menuMaterialColors)]
         public static bool VerifyQuickMaterialAction()
         {
             return ProBuilderEditor.instance != null && MeshSelection.selectedObjectCount > 0 && instance != null && instance.m_QueuedMaterial.value != null;
         }
 
-        [MenuItem(k_QuickMaterialPath+" %#M2", false, PreferenceKeys.menuMaterialColors)]
+        [MenuItem(k_QuickMaterialPath, false, PreferenceKeys.menuMaterialColors)]
         public static void ApplyQuickMaterial()
+        {
+            ApplyMaterial(MeshSelection.topInternal, instance.m_QueuedMaterial.value);
+        }
+
+        [Shortcut("ProBuilder/Apply Quick Material", typeof(MaterialShortcutContext), KeyCode.Mouse2, defaultShortcutModifiers: ShortcutModifiers.Shift | ShortcutModifiers.Control)]
+        public static void ApplyQuickMaterialShortcut()
         {
             ApplyMaterial(MeshSelection.topInternal, instance.m_QueuedMaterial.value);
         }
@@ -133,6 +149,8 @@ namespace UnityEditor.ProBuilder
         // The index of the currently loaded material palette in m_AvailablePalettes
         int m_CurrentPaletteIndex = 0;
 
+        MaterialShortcutContext m_ShortcutContext;
+
         /// <summary>
         /// The currently loaded material palette, or a default.
         /// </summary>
@@ -192,10 +210,13 @@ namespace UnityEditor.ProBuilder
             m_RowBackgroundStyle.normal.background = EditorGUIUtility.whiteTexture;
             s_CurrentPalette = null;
             RefreshAvailablePalettes();
+
+            ShortcutManager.RegisterContext(m_ShortcutContext ??= new MaterialShortcutContext());
         }
 
         void OnDisable()
         {
+            ShortcutManager.UnregisterContext(m_ShortcutContext);
             instance = null;
         }
 
@@ -223,8 +244,18 @@ namespace UnityEditor.ProBuilder
             GUI.enabled = true;
             GUILayout.EndHorizontal();
 
-            var quickMatShortcut = ShortcutManager.instance.GetShortcutBinding("Main Menu/"+k_QuickMaterialPath).ToString();
-            if (GUILayout.Button("Apply ("+quickMatShortcut+")"))
+            var quickMaterialShortcut = string.Empty;
+            try
+            {
+                quickMaterialShortcut = ShortcutManager.instance.GetShortcutBinding("Main Menu/" + k_QuickMaterialPath).ToString();
+            }
+            catch (Exception)
+            {
+                // Do nothing.
+            }
+
+            var quickMaterialButtonLabel = string.IsNullOrEmpty(quickMaterialShortcut) ? "Apply" : $"Apply ({quickMaterialShortcut})";
+            if (GUILayout.Button(quickMaterialButtonLabel))
                 ApplyMaterial(MeshSelection.topInternal, m_QueuedMaterial.value);
 
             GUILayout.EndVertical();
@@ -301,10 +332,21 @@ namespace UnityEditor.ProBuilder
                 GUILayout.BeginHorizontal();
                 if (i < 10)
                 {
-                    var shortcutPath = "Main Menu/Tools/" + PreferenceKeys.pluginTitle + "/Materials/Apply Material Preset " + (i + 1);
-                    var shortcut = ShortcutManager.instance.GetShortcutBinding(shortcutPath).ToString();
-                    var buttonLabel = string.IsNullOrEmpty(shortcut) ? $"Apply {i}" : $"Apply {i} ({shortcut})";
-                    if (GUILayout.Button(buttonLabel, EditorStyles.miniButton, GUILayout.MinWidth(50), GUILayout.MaxWidth(150)))
+                    var applyMaterialPresetShortcut = string.Empty;
+                    try
+                    {
+                        var shortcutPath = "Main Menu/Tools/" + PreferenceKeys.pluginTitle + "/Materials/Apply Material Preset " + (i + 1);
+                        applyMaterialPresetShortcut = ShortcutManager.instance.GetShortcutBinding(shortcutPath).ToString();
+                    }
+                    catch (Exception)
+                    {
+                        // Do nothing.
+                    }
+
+                    var applyMaterialPresetButtonLabel = string.IsNullOrEmpty(applyMaterialPresetShortcut)
+                        ? $"Apply {i}"
+                        : $"Apply {i} ({applyMaterialPresetShortcut})";
+                    if (GUILayout.Button(applyMaterialPresetButtonLabel, EditorStyles.miniButton, GUILayout.MinWidth(50), GUILayout.MaxWidth(150)))
                         ApplyMaterial(MeshSelection.topInternal, materials[i]);
                 }
                 else

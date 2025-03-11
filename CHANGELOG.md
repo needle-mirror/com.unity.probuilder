@@ -5,12 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.0.5] - 2025-03-11
+
+### Changes
+
+- Improved DrawShape tool performance when you place the first vertex.
+
+### Fixed
+
+- Fixed a bug where undoing a PolyShape creation then redoing it did not restore the PolyShape.
+- Fixed a bug where you could progress to the Edit Height stage of the Polyshape creation tool without forming a base polygon with at least three points.
+- Fixed a bug where shapes created by pressing Enter or Space using the Polyshape creation tool were not selectable or added to the scene hierarchy.
+- [PBLD-213] Fixed a bug where selection changes made while the PolyShape creation tool was active were being reverted.
+- [PBLD-192] Fixed a bug where vertices were not able to snap on other vertices from the same mesh.
+- [PBLD-189] Fixed a bug where using the auto-stitch functionality of the UV Editor would not work properly on MacOS.
+- [PBLD-187] Fixed a bug where the object size was incorrect when using the DrawShape tool on angled surfaces.
+- [PBLD-180] Fixed a bug in the Material Editor where an exception was thrown because it attempted to retrieve `MenuItem` shortcuts before the main menu was fully loaded.
+- [PBLD-210] Fixed a bug where Undo was not working correctly with the Polyshape creation tool. 
+- [PBLD-196] Fixed a bug where the Polyshape creation tool was not working with an orthographic camera.
+- [STO-3429] Fixed a bug where increment snapping was ignored when drawing ProBuilder shapes.
+- [STO-3432] Fixed a bug where the Polyshape creation tool was not placing the first point on a custom grids correctly.
+- [PBLD-183] Fixed a bug where the **Extrude by** setting of the **Extrude Faces** action was always set to **Individual Faces**.
+- [STO-3442] Fixed a bug where hover-highlighted elements are not always selected.
+- [PBLD-208] Fixed an issue "Apply Quick Material" shortcut would always be present in the Shortcut Helper Bar.
+- [PBLD-202] Fixed an issue where creating ProBuilder shapes using the Hierarchy menu would not result in procedurally editable `ProBuilderShape` meshes. 
+- [PBLD-205] Fixed a bug where the `Edit PolyShape` tool would revert previously merged PolyShape objects.
+- [PBLD-199] Fixed a bug where an exception was thrown if you placed two cut tool vertices on the same edge.
+
 ## [6.0.4] - 2024-09-12
 
 ### Changes
 
-- [PBLD-169] "Edit Vertices/Edges/Faces" shortcuts now automatically enter the ProBuilder context.
-- [PBLD-167] Removed "Toggle ProBuilder Context" shortcut - the built-in "Cycle Tool Modes" shortcut should be used instead.
+- [PBLD-169] Using the **Edit Vertices**, **Edit Edges**, and **Edit Faces** shortcuts now automatically activate the the ProBuilder tool context.
+- [PBLD-167] Removed the **Toggle ProBuilder Context** shortcut. Use the the built-in **Cycle Tool Modes** shortcut instead.
 
 ## [6.0.3] - 2024-08-20
 

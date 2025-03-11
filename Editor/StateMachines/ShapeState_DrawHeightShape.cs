@@ -78,7 +78,7 @@ namespace UnityEditor.ProBuilder
                         {
                             var deltaPoint = (dot == 0 ? ray.origin - tool.m_Plane.ClosestPointOnPlane(ray.origin) : heightPoint - tool.m_BB_OppositeCorner);
                             deltaPoint = Quaternion.Inverse(tool.m_PlaneRotation) * deltaPoint;
-                            deltaPoint = tool.GetPoint(deltaPoint, evt.control);
+                            deltaPoint = tool.GetPoint(deltaPoint, EditorSnapSettings.snapEnabled);
                             tool.m_BB_HeightCorner = tool.m_PlaneRotation * deltaPoint + tool.m_BB_OppositeCorner;
                             tool.RebuildShape();
                         }
@@ -86,7 +86,10 @@ namespace UnityEditor.ProBuilder
                         break;
 
                     case EventType.MouseUp:
+                    {
+                        tool.m_LastNonDuplicateCenterToOrigin = Quaternion.Inverse(tool.m_PlaneRotation)  * ((tool.m_BB_Origin - tool.m_BB_HeightCorner) * 0.5f);
                         return ValidateShape();
+                    }
                 }
             }
 
