@@ -1,7 +1,7 @@
 {
   "name": "com.unity.probuilder",
   "displayName": "ProBuilder",
-  "version": "6.0.5",
+  "version": "6.0.6",
   "unity": "6000.0",
   "description": "Build, edit, and texture custom geometry in Unity. Use ProBuilder for in-scene level design, prototyping, collision meshes, all with on-the-fly play-testing.\n\nAdvanced features include UV editing, vertex colors, parametric shapes, and texture blending. With ProBuilder's model export feature it's easy to tweak your levels in any external 3D modelling suite.",
   "keywords": [
@@ -45,18 +45,18 @@
     "com.unity.modules.imgui": "1.0.0"
   },
   "relatedPackages": {
-    "com.unity.probuilder.tests": "6.0.5"
+    "com.unity.probuilder.tests": "6.0.6"
   },
   "_upm": {
-    "changelog": "### Changes\n\n- Improved DrawShape tool performance when you place the first vertex.\n\n### Fixed\n\n- Fixed a bug where undoing a PolyShape creation then redoing it did not restore the PolyShape.\n- Fixed a bug where you could progress to the Edit Height stage of the Polyshape creation tool without forming a base polygon with at least three points.\n- Fixed a bug where shapes created by pressing Enter or Space using the Polyshape creation tool were not selectable or added to the scene hierarchy.\n- [PBLD-213] Fixed a bug where selection changes made while the PolyShape creation tool was active were being reverted.\n- [PBLD-192] Fixed a bug where vertices were not able to snap on other vertices from the same mesh.\n- [PBLD-189] Fixed a bug where using the auto-stitch functionality of the UV Editor would not work properly on MacOS.\n- [PBLD-187] Fixed a bug where the object size was incorrect when using the DrawShape tool on angled surfaces.\n- [PBLD-180] Fixed a bug in the Material Editor where an exception was thrown because it attempted to retrieve `MenuItem` shortcuts before the main menu was fully loaded.\n- [PBLD-210] Fixed a bug where Undo was not working correctly with the Polyshape creation tool. \n- [PBLD-196] Fixed a bug where the Polyshape creation tool was not working with an orthographic camera.\n- [STO-3429] Fixed a bug where increment snapping was ignored when drawing ProBuilder shapes.\n- [STO-3432] Fixed a bug where the Polyshape creation tool was not placing the first point on a custom grids correctly.\n- [PBLD-183] Fixed a bug where the **Extrude by** setting of the **Extrude Faces** action was always set to **Individual Faces**.\n- [STO-3442] Fixed a bug where hover-highlighted elements are not always selected.\n- [PBLD-208] Fixed an issue \"Apply Quick Material\" shortcut would always be present in the Shortcut Helper Bar.\n- [PBLD-202] Fixed an issue where creating ProBuilder shapes using the Hierarchy menu would not result in procedurally editable `ProBuilderShape` meshes. \n- [PBLD-205] Fixed a bug where the `Edit PolyShape` tool would revert previously merged PolyShape objects.\n- [PBLD-199] Fixed a bug where an exception was thrown if you placed two cut tool vertices on the same edge."
+    "changelog": "### Changes\n\n- [PBLD-228] Updated function to access shader property types.\n\n### Fixed\n\n- [PBLD-224] Fixed rect selection in HDRP.\n- [PBLD-236] Fixed a bug where degenerate triangles were being added to output meshes, causing occasional rendering artifacts.\n- [PBLD-220] Fixed an error in the SoftDeleteEdges sample code that was preventing it from appearing in the context menu.\n- [PBLD-231] Fixed a bug where Extrude was not being disabled in the context menu when 'allow non-manifold actions' was not selected in the ProBuilder preferences.\n- [PBLD-238] Fixed a bug that could cause users to lose any work that they did on a ProBuilder mesh between two usages of tool actions that had previews (options overlays).\n- [PBLD-222] Fixed crash by preventing user from probuilderizing a gameobject that has isPartOfStaticBatch set to true.\n- [PBLD-245] Fixed warnings about obsolete API usage when using Unity 6.2 and later. Updated the API usage where the alternatives were available in Unity 2022.3."
   },
   "upmCi": {
-    "footprint": "209e6e1c66f84e553473279422b54aaea7c737fe"
+    "footprint": "74284bc37b0c188f819e78091e8dee04158a0d03"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.probuilder@6.0/manual/index.html",
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.probuilder.git",
     "type": "git",
-    "revision": "3efb5ffce15fb2092437e0cb5a15f3a5de69fb61"
+    "revision": "7a59962a86a9fc88227ccfe1191b8d756209f8c6"
   }
 }
