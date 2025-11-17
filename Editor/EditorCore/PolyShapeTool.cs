@@ -30,6 +30,24 @@ namespace UnityEditor.ProBuilder
 
         PolyShape m_PolyShape = null;
 
+        static GUIContent s_IconContent;
+
+        /// <inheritdoc />
+        public override GUIContent toolbarIcon
+        {
+            get
+            {
+                if (s_IconContent == null)
+                    s_IconContent = new GUIContent()
+                    {
+                        image = IconUtility.GetIcon("Toolbar/CreatePolyShape"),
+                        text = "Create PolyShape",
+                        tooltip = "Create PolyShape"
+                    };
+                return s_IconContent;
+            }
+        }
+
         /// <inheritdoc/>
         public override void OnActivated()
         {
@@ -131,7 +149,7 @@ namespace UnityEditor.ProBuilder
             polygon = null;
             return false;
         }
-        
+
         /// <inheritdoc/>
         protected override void OnObjectSelectionChanged()
         {
@@ -337,13 +355,31 @@ namespace UnityEditor.ProBuilder
             }
         }
 
+        static GUIContent s_IconContent;
+
+        /// <inheritdoc />
+        public override GUIContent toolbarIcon
+        {
+            get
+            {
+                if (s_IconContent == null)
+                    s_IconContent = new GUIContent()
+                    {
+                        image = IconUtility.GetIcon("Toolbar/CreatePolyShape"),
+                        text = "Edit PolyShape",
+                        tooltip = "Edit PolyShape"
+                    };
+                return s_IconContent;
+            }
+        }
+
         void OnEnable()
         {
             m_OverlayTitle = new GUIContent("PolyShape Settings");
         }
 
         void OnDisable(){}
-        
+
         /// <inheritdoc/>
         public override void OnActivated()
         {
@@ -360,7 +396,7 @@ namespace UnityEditor.ProBuilder
             m_Target = null;
             UpdateTarget();
         }
-        
+
         /// <inheritdoc/>
         public override void OnWillBeDeactivated()
         {
