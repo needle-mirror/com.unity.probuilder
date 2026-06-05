@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2026-06-05
+
+### Internal
+
+- [UUM-138957] Removed ProBuilder Runtime tests references to UnityEditor.
+
+### Changes
+
+- Added the ProBuilder Actions overlay to add another way for users to directly access actions in the scene.
+- [UUM-138261] Fixed an issue where the move handle could create an incorrect displacement of selected elements.
+- [UUM-136930] Fixed Arch circumference field not being fully readable in the editor.
+- [UUM-132698] Fixed incorrect snapping of the UV Editor MoveTool in the scene. 
+- [UUM-131032] Added a reset of static variables when entering playmode to allow fast enter playmode compatibility.
+- [UUM-138539] Removed the pb_ObjectArray file that was deprecated 8 years ago and is not used amymore.
+- [UUM-138960] Removed a large utility dictionary to reduce binary size and runtime memory overhead. 
+
+### Fixed
+
+- [UUM-141074] Fixed an issue where the CreateShape and CreatePolyshape tools would not properly snap to the grid.
+- [UUM-133529] Fixed an issue where ProBuilder GameObjects could not change back to 3D shapes after being changed to Plane or Sprite.
+- [UUM-133861] Fixed "Look rotation viewing vector is zero" log being spammed when holding shift while using a create tool such as Create Sprite.
+- [UUM-133859] Fixed an issue in URP projects where the Editor would recompile scripts when after a rectangle selection in ProBuilder. 
+- [UUM-133530] Fixed the `Set Double Sided` custom action in the Editor Sample, which was previously remaining disabled.
+- [UUM-133530] Ensured that the context menu respects the value of `MenuAction.enabled`.
+- [UUM-133531] Fixed component icons in Light theme.
+- [UUM-133526] Material Editor: fixed a warning (`GUI Error: Invalid GUILayout state in MaterialEditor view.`) that was thrown when deleting an extra material slot.
+- Fixed warnings related to obsolete API calls with Unity 6.4 and onwards.
+
 ## [6.0.9] - 2026-01-30
 
 ### Fixed

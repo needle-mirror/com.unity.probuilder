@@ -69,13 +69,42 @@ namespace UnityEngine.ProBuilder
         static Material s_UnityDefaultDiffuse;
         static Material s_ShapePreviewMaterial;
 
-        static string k_EdgePickerMaterial = "Materials/EdgePicker";
-        static string k_FacePickerMaterial = "Materials/FacePicker";
-        static string k_VertexPickerMaterial = "Materials/VertexPicker";
+#if PB_URP_MODE
+        static string k_EdgePickerShader = "Hidden/ProBuilder/EdgePickerURP";
+        static string k_VertexPickerShader = "Hidden/ProBuilder/VertexPickerURP";
+        static string k_FacePickerShader = "Hidden/ProBuilder/FacePickerURP";
 
+        static string k_EdgePickerMaterial = "com.unity.probuilder/Materials/EdgePickerURP";
+        static string k_FacePickerMaterial = "com.unity.probuilder/Materials/FacePickerURP";
+        static string k_VertexPickerMaterial = "com.unity.probuilder/Materials/VertexPickerURP";
+
+        const string k_SelectionPickerShader = "Hidden/ProBuilder/SelectionPickerURP";
+#else
         static string k_EdgePickerShader = "Hidden/ProBuilder/EdgePicker";
         static string k_FacePickerShader = "Hidden/ProBuilder/FacePicker";
         static string k_VertexPickerShader = "Hidden/ProBuilder/VertexPicker";
+
+        static string k_EdgePickerMaterial = "com.unity.probuilder/Materials/EdgePicker";
+        static string k_FacePickerMaterial = "com.unity.probuilder/Materials/FacePicker";
+        static string k_VertexPickerMaterial = "com.unity.probuilder/Materials/VertexPicker";
+
+        const string k_SelectionPickerShader = "Hidden/ProBuilder/SelectionPicker";
+#endif
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ResetStaticsOnLoad()
+        {
+            // Reset the static variables to their initial values, these 3 static variables will be re-initialized when accessed
+            s_DefaultMaterial = null;
+            s_UnityDefaultDiffuse = null;
+            s_ShapePreviewMaterial = null;
+
+            // Re-initialize the rest of the static variables
+            s_IsInitialized = false;
+            Init();
+        }
+#endif
 
         static void Init()
         {
@@ -88,7 +117,7 @@ namespace UnityEngine.ProBuilder
             s_GeometryShadersSupported = geo != null && geo.isSupported;
 
             // SelectionPicker shader
-            s_SelectionPickerShader = (Shader)Shader.Find("Hidden/ProBuilder/SelectionPicker");
+            s_SelectionPickerShader = (Shader)Shader.Find(k_SelectionPickerShader);
 
             if ((s_FacePickerMaterial = Resources.Load<Material>(k_FacePickerMaterial)) == null)
             {
@@ -108,6 +137,7 @@ namespace UnityEngine.ProBuilder
                 s_EdgePickerMaterial = new Material(Shader.Find(k_EdgePickerShader));
             }
         }
+
 
         /// <summary>
         /// Tests whether the current graphics device supports geometry shaders.

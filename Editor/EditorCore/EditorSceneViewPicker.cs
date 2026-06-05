@@ -33,6 +33,18 @@ namespace UnityEditor.ProBuilder
         // When enabled, a mouse click on an unselected mesh will select both the GameObject and the mesh element picked.
         const bool k_AllowUnselected = true;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_DeepSelectionPrevious = 0x0;
+            s_AppendModifierPreviousState = false;
+            s_Selection.Clear();
+            s_NearestVertices.Clear();
+            s_OverlappingGameObjects.Clear();
+            s_IndexBuffer.Clear();
+            s_EdgeBuffer.Clear();
+        }
+
         public static void DoMouseHover(SceneSelection selection)
         {
             if (selection.faces.Count == 0)
@@ -275,12 +287,16 @@ namespace UnityEditor.ProBuilder
                 case SelectMode.Vertex:
                 case SelectMode.TextureVertex:
                 {
+                    var lastSceneView = SceneView.lastActiveSceneView;
+                    var isDrawingGizmos = lastSceneView.drawGizmos;
+                    lastSceneView.drawGizmos = false;
                     Dictionary<ProBuilderMesh, HashSet<int>> selected = SelectionPicker.PickVerticesInRect(
-                            SceneView.lastActiveSceneView.camera,
+                            lastSceneView.camera,
                             mouseDragRect,
                             MeshSelection.topInternal,
                             pickingOptions,
                             EditorGUIUtility.pixelsPerPoint);
+                    lastSceneView.drawGizmos = isDrawingGizmos;
 
                     foreach (var kvp in selected)
                     {
@@ -312,12 +328,16 @@ namespace UnityEditor.ProBuilder
                 case SelectMode.Face:
                 case SelectMode.TextureFace:
                 {
+                    var lastSceneView = SceneView.lastActiveSceneView;
+                    var isDrawingGizmos = lastSceneView.drawGizmos;
+                    lastSceneView.drawGizmos = false;
                     Dictionary<ProBuilderMesh, HashSet<Face>> selected = SelectionPicker.PickFacesInRect(
-                            SceneView.lastActiveSceneView.camera,
+                        lastSceneView.camera,
                             mouseDragRect,
                             MeshSelection.topInternal,
                             pickingOptions,
                             EditorGUIUtility.pixelsPerPoint);
+                    lastSceneView.drawGizmos = isDrawingGizmos;
 
                     foreach (var kvp in selected)
                     {
@@ -347,12 +367,16 @@ namespace UnityEditor.ProBuilder
                 case SelectMode.Edge:
                 case SelectMode.TextureEdge:
                 {
+                    var lastSceneView = SceneView.lastActiveSceneView;
+                    var isDrawingGizmos = lastSceneView.drawGizmos;
+                    lastSceneView.drawGizmos = false;
                     var selected = SelectionPicker.PickEdgesInRect(
-                            SceneView.lastActiveSceneView.camera,
+                        lastSceneView.camera,
                             mouseDragRect,
                             MeshSelection.topInternal,
                             pickingOptions,
                             EditorGUIUtility.pixelsPerPoint);
+                    lastSceneView.drawGizmos = isDrawingGizmos;
 
                     foreach (var kvp in selected)
                     {

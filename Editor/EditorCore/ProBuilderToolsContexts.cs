@@ -16,7 +16,7 @@ namespace UnityEditor.ProBuilder
         public static Tool activeTool => Tools.current;
     }
 
-    [Icon("Packages/com.unity.probuilder/Content/Icons/EditableMesh/EditMeshContext.png")]
+    [Icon("Packages/com.unity.probuilder/Editor Default Resources/Icons/EditableMesh/EditMeshContext.png")]
     [EditorToolContext("ProBuilder", typeof(ProBuilderMesh))]
     class PositionToolContext : EditorToolContext
     {
@@ -110,7 +110,7 @@ namespace UnityEditor.ProBuilder
                         menu.AppendAction(title, _ => EditorAction.Start(new MenuActionSettings(action, HasPreview(action))), GetStatus(action));
                     }
                     else
-                        menu.AppendAction(GetMenuTitle(action, title), _ => action.PerformAction());
+                        menu.AppendAction(GetMenuTitle(action, title), _ => action.PerformAction(), GetStatus(action));
                 }
             }
 
@@ -183,6 +183,12 @@ namespace UnityEditor.ProBuilder
         // This boolean allows to call the action only once in case of multi-selection as PB actions
         // are called on the entire selection and not per element.
         static bool s_ActionAlreadyTriggered = false;
+
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_ActionAlreadyTriggered = false;
+        }
 
         [MenuItem("CONTEXT/ProBuilderMesh/Conform Normals", true)]
         static bool ValidateConformObjectNormalsAction()

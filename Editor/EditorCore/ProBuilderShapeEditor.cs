@@ -37,6 +37,12 @@ namespace UnityEditor.ProBuilder
 
         static bool s_foldoutEnabled = true;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_foldoutEnabled = true;
+        }
+
         public GUIContent m_ShapePropertyLabel = new GUIContent("Shape Properties");
         readonly GUIContent k_ShapePivotLabel = new GUIContent("Pivot");
 
@@ -127,7 +133,7 @@ namespace UnityEditor.ProBuilder
             if(foldoutEnabled)
             {
                 EditorGUI.indentLevel++;
-                EditorGUIUtility.labelWidth = 90;
+                EditorGUIUtility.labelWidth = 120;
 
                 if (tool)
                     tool.pivotLocation = (PivotLocation)EditorGUILayout.EnumPopup(k_ShapePivotLabel, tool.pivotLocation);

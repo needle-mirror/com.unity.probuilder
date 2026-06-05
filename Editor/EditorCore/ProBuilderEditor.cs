@@ -179,8 +179,21 @@ namespace UnityEditor.ProBuilder
                     padding = new RectOffset(0, 0, 0, 0)
                 };
             }
+
+            internal static void ResetForPlayMode()
+            {
+                s_Init = false;
+                s_SelectionRect = null;
+                Init();
+            }
         }
-        
+
+        [InitializeOnEnterPlayMode]
+        static void ResetSceneStylesOnLoad()
+        {
+            SceneStyles.ResetForPlayMode();
+        }
+
         /// <summary>
         /// Static getter for the ProBuilderEditor instance.
         /// </summary>
@@ -283,7 +296,7 @@ namespace UnityEditor.ProBuilder
         {
             instance?.UpdateSelection(vertexCountChanged);
         }
-        
+
         /// <summary>
         /// Called when handling events in Scene view.
         /// </summary>
@@ -742,7 +755,7 @@ namespace UnityEditor.ProBuilder
         {
             UpdateMeshHandles();
 
-            if (selectionUpdated != null)
+            if (selectionChanged && selectionUpdated != null)
                 selectionUpdated(selection);
 
             SceneView.RepaintAll();
