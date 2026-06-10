@@ -1,7 +1,7 @@
 {
   "name": "com.unity.probuilder",
   "displayName": "ProBuilder",
-  "version": "6.1.0",
+  "version": "6.1.1",
   "unity": "6000.0",
   "description": "Build, edit, and texture custom geometry in Unity. Use ProBuilder for in-scene level design, prototyping, collision meshes, all with on-the-fly play-testing.\n\nAdvanced features include UV editing, vertex colors, parametric shapes, and texture blending. With ProBuilder's model export feature it's easy to tweak your levels in any external 3D modelling suite.",
   "keywords": [
@@ -45,18 +45,18 @@
     "com.unity.modules.imgui": "1.0.0"
   },
   "relatedPackages": {
-    "com.unity.probuilder.tests": "6.1.0"
+    "com.unity.probuilder.tests": "6.1.1"
   },
   "_upm": {
-    "changelog": "### Internal\n\n- [UUM-138957] Removed ProBuilder Runtime tests references to UnityEditor.\n\n### Changes\n\n- Added the ProBuilder Actions overlay to add another way for users to directly access actions in the scene.\n- [UUM-138261] Fixed an issue where the move handle could create an incorrect displacement of selected elements.\n- [UUM-136930] Fixed Arch circumference field not being fully readable in the editor.\n- [UUM-132698] Fixed incorrect snapping of the UV Editor MoveTool in the scene. \n- [UUM-131032] Added a reset of static variables when entering playmode to allow fast enter playmode compatibility.\n- [UUM-138539] Removed the pb_ObjectArray file that was deprecated 8 years ago and is not used amymore.\n- [UUM-138960] Removed a large utility dictionary to reduce binary size and runtime memory overhead. \n\n### Fixed\n\n- [UUM-141074] Fixed an issue where the CreateShape and CreatePolyshape tools would not properly snap to the grid.\n- [UUM-133529] Fixed an issue where ProBuilder GameObjects could not change back to 3D shapes after being changed to Plane or Sprite.\n- [UUM-133861] Fixed \"Look rotation viewing vector is zero\" log being spammed when holding shift while using a create tool such as Create Sprite.\n- [UUM-133859] Fixed an issue in URP projects where the Editor would recompile scripts when after a rectangle selection in ProBuilder. \n- [UUM-133530] Fixed the `Set Double Sided` custom action in the Editor Sample, which was previously remaining disabled.\n- [UUM-133530] Ensured that the context menu respects the value of `MenuAction.enabled`.\n- [UUM-133531] Fixed component icons in Light theme.\n- [UUM-133526] Material Editor: fixed a warning (`GUI Error: Invalid GUILayout state in MaterialEditor view.`) that was thrown when deleting an extra material slot.\n- Fixed warnings related to obsolete API calls with Unity 6.4 and onwards."
+    "changelog": "### Changes\n\n- Regenerated most of probuilder assets to get a more recent serialized version. \n- Removing old CONTRIBUTING.md file"
   },
   "upmCi": {
-    "footprint": "c215860377b909d0ef6bcd921e2e159fb0bf7c9c"
+    "footprint": "189db2544694fc6e278e4e5495663b25578e66a6"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.probuilder@6.1/manual/index.html",
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.probuilder.git",
     "type": "git",
-    "revision": "624f0e917516dfc1fb78f74f9d7c255def36cf1c"
+    "revision": "57f069974ba58fb681b56e40576936b0af255fc8"
   }
 }
