@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.1.3] - 2026-10-07
+
+### Fixed
+
+- [UUM-155018] Fixed rect selection in URP not selecting any vertices, edges or faces when Select Hidden is disabled.
+- [UUM-149791] Fixed the First Vertex pivot ending up offset from the shape after resizing an existing shape or shift-duplicating one with the Shape tool.
+- [UUM-148935] Fixed `VectorHash`/`IntVec2`/`IntVec3`/`IntVec4` producing different hash codes on different runtimes and architectures (e.g. Mono vs CoreCLR), and fixed a `GetHashCode` contract violation where positions considered equal by `IntVec3.Equals` could still hash differently, silently breaking vertex welding.
+- [UUM-150702] Fixed the ProBuilderDefault and Checker materials referencing a stale shader ID, causing ProBuilder meshes to render magenta when a scene was opened.
+- [UUM-148237] Fixed the "Lightmap UVs Settings" foldout in ProBuilder Preferences not opening when clicking its title.
+- [UUM-133528] Fixed an issue where using some UV Editor actions would clear a mesh's Lightmap UVs without regenerating them.
+- [UUM-148243] Fixed the Dimensions Overlay not updating when resizing a PolyShape or primitive Shape in the Scene View.
+- Fixed the Select Hidden (Select Back Faces) toggle icon missing from the Tool Settings overlay due to a filename casing mismatch.
+
+### Changes
+
+- Made the ProBuilder Editor actions available in GameObject context in the action overlay.
+- Replaced the `ProBuilder/Diffuse Vertex Color` and `ProBuilder/Diffuse Texture Blend` surface shaders with Shader Graph equivalents.
+
 ## [6.1.2] - 2026-06-11
 
 ### Fixed
